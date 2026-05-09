@@ -41,12 +41,13 @@ export function StrongsPanel() {
     setLexLoading(true);
     setShowFullConcordance(false);
     setUsageLimit(20);
-    supabase
-      .from('strongs_lexicon')
-      .select('*')
-      .eq('strongs_id', word.strongsId)
-      .single()
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('strongs_lexicon')
+          .select('*')
+          .eq('strongs_id', word.strongsId)
+          .single();
         if (data) {
           setLexEntry({
             word: data.word || word.strongsId,
@@ -58,8 +59,10 @@ export function StrongsPanel() {
         } else {
           setLexEntry(null);
         }
-      })
-      .finally(() => setLexLoading(false));
+      } finally {
+        setLexLoading(false);
+      }
+    })();
   }, [word?.strongsId]);
 
   // Fetch concordance occurrences
