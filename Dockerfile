@@ -18,8 +18,12 @@ RUN npm ci
 COPY src ./src
 COPY public ./public
 
-# Build the application
-# Env vars are passed at runtime — do NOT bake .env.local into the image
+# Public vars must be baked in at build time (Next.js embeds them in the client bundle)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
 RUN npm run build
 
 # Production stage
