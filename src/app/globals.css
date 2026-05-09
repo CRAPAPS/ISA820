@@ -1,0 +1,346 @@
+@import "tailwindcss";
+
+/* ISA820 - Obsidian Glass Theme System */
+:root {
+  /* Core Obsidian Palette */
+  --obsidian-950: #020617;
+  --obsidian-900: #0f172a;
+  --obsidian-800: #1e293b;
+  --obsidian-700: #334155;
+  
+  /* Glassmorphic Layers */
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(148, 163, 184, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+  
+  /* Voice Signature Colors */
+  --voice-father: #fbbf24;      /* Gold - The Father */
+  --voice-father-glow: #f59e0b;
+  --voice-son: #dc2626;         /* Crimson - The Son */
+  --voice-son-glow: #ef4444;
+  --voice-angel: #94a3b8;       /* Silver - Angelic Voices */
+  --voice-angel-glow: #cbd5e1;
+  
+  /* Pillar Accent Colors */
+  --pillar-standard: #f59e0b;   /* Gold Torch */
+  --pillar-identity: #3b82f6;  /* Blue Seal */
+  --pillar-nature-fire: #f97316;    /* Amber Fire */
+  --pillar-nature-whisper: #06b6d4; /* Cyan Whisper */
+  --pillar-nature-light: #f8fafc;   /* White Light */
+  
+  /* Semantic Colors */
+  --accent-primary: #8b5cf6;
+  --accent-secondary: #06b6d4;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+@theme inline {
+  --color-obsidian-950: var(--obsidian-950);
+  --color-obsidian-900: var(--obsidian-900);
+  --color-obsidian-800: var(--obsidian-800);
+  --color-obsidian-700: var(--obsidian-700);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-voice-father: var(--voice-father);
+  --color-voice-son: var(--voice-son);
+  --color-voice-angel: var(--voice-angel);
+  --color-pillar-standard: var(--pillar-standard);
+  --color-pillar-identity: var(--pillar-identity);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+  --font-bible: var(--font-spectral);
+}
+
+/* Base Styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: linear-gradient(135deg, var(--obsidian-950) 0%, var(--obsidian-900) 50%, var(--obsidian-950) 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Glassmorphic Card Base */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+/* Opaque panel variant — for floating panels that sit over other content */
+.glass-panel-solid {
+  background: rgba(8, 14, 30, 0.97) !important;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 8px 16px -4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.4),
+    0 8px 10px -6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--glass-highlight),
+    0 0 20px rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+/* Glowing Effects */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.4), 0 0 40px rgba(251, 191, 36, 0.2);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), 0 0 40px rgba(6, 182, 212, 0.2);
+}
+
+.glow-crimson {
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4), 0 0 40px rgba(220, 38, 38, 0.2);
+}
+
+.glow-silver {
+  box-shadow: 0 0 20px rgba(148, 163, 184, 0.4), 0 0 40px rgba(148, 163, 184, 0.2);
+}
+
+/* Voice Signature Highlighting */
+.voice-father {
+  color: var(--voice-father);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.voice-son {
+  color: var(--voice-son);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+}
+
+.voice-angel {
+  color: var(--voice-angel);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.15) 0%, rgba(203, 213, 225, 0.05) 100%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
+}
+
+/* Bible Text — Spectral serif for scripture */
+.bible-text {
+  font-family: var(--font-bible), Georgia, 'Times New Roman', serif;
+  font-size: 1.125rem;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+}
+
+/* Tooltip Styles */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-content {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--obsidian-800);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 240px;
+  max-width: 320px;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.tooltip:hover .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: var(--obsidian-800);
+}
+
+/* Pulse Animation */
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.7), 0 0 50px rgba(251, 191, 36, 0.3); }
+}
+
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.7), 0 0 50px rgba(59, 130, 246, 0.3); }
+}
+
+@keyframes pulse-nature {
+  0%, 100% { 
+    box-shadow: 0 0 10px var(--nature-color);
+    color: var(--nature-color);
+  }
+  50% { 
+    box-shadow: 0 0 25px var(--nature-color), 0 0 50px var(--nature-color);
+    filter: brightness(1.3);
+  }
+}
+
+.pulse-gold { animation: pulse-gold 2s ease-in-out infinite; }
+.pulse-blue { animation: pulse-blue 2s ease-in-out infinite; }
+
+/* Strong's Word Links */
+.strongs-link {
+  color: var(--accent-secondary);
+  cursor: pointer;
+  border-bottom: 1px dashed var(--accent-secondary);
+  transition: all 0.2s ease;
+}
+
+.strongs-link:hover {
+  color: var(--accent-primary);
+  background: rgba(139, 92, 246, 0.1);
+  border-bottom-style: solid;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--obsidian-900);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--obsidian-700);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-600);
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Video Embed Container */
+.video-embed {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--obsidian-900);
+}
+
+.video-embed iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .tooltip-content {
+    min-width: 200px;
+    max-width: 260px;
+    padding: 10px 12px;
+  }
+}
+
+/* Shimmer Animation for Skeleton Loaders */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+/* Glass Navigation Button */
+.glass-nav-btn {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-nav-btn:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.glass-nav-btn:active {
+  transform: translateY(0);
+}
