@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Spectral } from "next/font/google";
+import { Inter, JetBrains_Mono, Spectral, Cinzel } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -19,6 +19,13 @@ const spectral = Spectral({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   style: ["normal", "italic"],
+  display: "swap",
+});
+
+const cinzel = Cinzel({
+  variable: "--font-cinzel",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
   display: "swap",
 });
 
@@ -42,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${spectral.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${spectral.variable} ${cinzel.variable}`}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>

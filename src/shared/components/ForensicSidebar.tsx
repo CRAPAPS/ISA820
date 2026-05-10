@@ -215,20 +215,22 @@ export function ForensicSidebar() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 300 }}
           transition={{ type: 'spring', damping: 25 }}
-          className="glass-card glass-panel-solid h-full flex flex-col"
+          className="glass-deep glass-panel-solid h-full flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="p-4 border-b border-slate-700/50">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-amber-400" />
-                Forensic Analysis
+          <div className="p-4 border-b border-white/5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-400" />
+                <span style={{ fontFamily: 'var(--font-cinzel), serif', letterSpacing: '0.05em', fontSize: '0.85rem' }}>
+                  Forensic Analysis
+                </span>
               </h2>
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors"
+                className="p-1.5 rounded-lg btn-ghost border-white/0 hover:text-white transition-colors"
               >
-                <X className="w-5 h-5 text-slate-400" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -266,9 +268,9 @@ export function ForensicSidebar() {
           </div>
 
           {/* Topic Pills */}
-          <div className="p-4 border-b border-slate-700/50">
-            <p className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Quick Topics</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="px-4 py-3 border-b border-white/5">
+            <p className="text-[10px] text-slate-600 mb-2 uppercase tracking-widest">Quick Topics</p>
+            <div className="flex overflow-x-auto scrollbar-hide gap-2 pb-1">
               {filteredTopics.map(topic => (
                 <button
                   key={topic}
@@ -276,10 +278,10 @@ export function ForensicSidebar() {
                     setCurrentTopic(topic);
                     setShowVerseAnalysis(false);
                   }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     sidebar.currentTopic === topic && !showVerseAnalysis
-                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700/50'
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm shadow-amber-500/10'
+                      : 'bg-slate-800/50 text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 border border-slate-700/40'
                   }`}
                 >
                   {topic}
@@ -288,8 +290,8 @@ export function ForensicSidebar() {
             </div>
           </div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-4">
+          {/* Content Area — single scroll container */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
             {/* Verse Analysis View */}
             {showVerseAnalysis && sidebar.selectedVerseForAnalysis && (
               <motion.div
@@ -298,35 +300,38 @@ export function ForensicSidebar() {
                 className="space-y-4"
               >
                 {/* Forensic Analyst Card — Live Gemini 2.5 Pro */}
-                <div className="glass-card p-4 border-cyan-500/30">
+                <div className={`glass-card p-4 border-cyan-500/25 ${isAnalystLoading ? 'scan-active' : ''}`}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Zap className="w-5 h-5 text-cyan-400" />
-                    <h3 className="font-semibold text-white">Forensic Analyst</h3>
+                    <Zap className="w-4 h-4 text-cyan-400" />
+                    <h3 className="font-semibold text-white text-sm">Forensic Analyst</h3>
                     {isAnalystLoading && (
-                      <Loader2 className="ml-auto w-4 h-4 text-cyan-400 animate-spin" />
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                        <span className="text-xs text-green-400">Live</span>
+                      </div>
                     )}
                     {!isAnalystLoading && analystResponse && (
-                      <span className="ml-auto text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">LIVE</span>
+                      <span className="ml-auto text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20">Done</span>
                     )}
                   </div>
 
                   {analystError && (
-                    <p className="text-xs text-red-400 mb-2">{analystError}</p>
+                    <p className="text-xs text-red-400 mb-2 leading-relaxed">{analystError}</p>
                   )}
 
                   {isAnalystLoading && !analystResponse && (
                     <div className="flex flex-col gap-2 py-6 items-center">
-                      <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
-                      <span className="text-xs text-slate-400">Analyzing manuscript evidence…</span>
+                      <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                      <span className="text-xs text-slate-500">Analyzing manuscript evidence…</span>
                     </div>
                   )}
 
-                  {/* Streaming response — rendered as markdown */}
+                  {/* Streaming response */}
                   {analystResponse && (
-                    <div className="max-h-[60vh] overflow-y-auto pr-1 mb-3 space-y-0.5">
+                    <div className="mb-3 space-y-0.5">
                       <AnalystMarkdown text={analystResponse} />
                       {isAnalystLoading && (
-                        <span className="inline-block w-2 h-3.5 bg-cyan-400 animate-pulse ml-0.5 align-middle" />
+                        <span className="cursor-blink" />
                       )}
                     </div>
                   )}

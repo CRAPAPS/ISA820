@@ -209,12 +209,12 @@ function VerseCard({
       id={`bv-${verse.verse}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`glass-card p-5 cursor-pointer transition-all ${
+      className={`glass-card p-5 cursor-pointer transition-all duration-200 ${
         isCurrent
-          ? 'border-amber-500/60 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/25'
+          ? 'border-amber-500/50 ring-glow-gold -translate-y-px'
           : isAnalysed
-            ? 'border-cyan-500/40 shadow-sm shadow-cyan-500/10'
-            : 'hover:border-slate-600/50'
+            ? 'border-cyan-500/40 ring-glow-cyan'
+            : 'hover:border-slate-600/50 hover:-translate-y-px hover:shadow-lg hover:shadow-black/20'
       }`}
       onClick={handleClick}
     >
@@ -709,7 +709,7 @@ function NavBar({
         </button>
 
         {/* Chapter progress strip */}
-        <div className="flex-1 mx-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex-1 mx-3 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-1 justify-center min-w-max py-1">
             {Array.from({ length: maxChap }, (_, i) => i + 1).map(ch => (
               <button
