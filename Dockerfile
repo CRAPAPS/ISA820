@@ -18,11 +18,9 @@ RUN npm ci
 COPY src ./src
 COPY public ./public
 
-# Public vars must be baked in at build time (Next.js embeds them in the client bundle)
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+# Anon key is public by design (browser-safe, protected by RLS)
+ENV NEXT_PUBLIC_SUPABASE_URL=https://gfswworikmaneujvcnrc.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmc3d3b3Jpa21hbmV1anZjbnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODA3MTAsImV4cCI6MjA5MTE1NjcxMH0.bj5yX1e0kjjNPUtWq1MyAiuIxdD-GO3pkd3vHos93bk
 
 RUN npm run build
 
