@@ -1,19 +1,76 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PillarHeader, BibleReader, ForensicSidebar, StrongsPanel } from '@/shared/components';
 import { useISA820Store } from '@/store/isa820-store';
-import { Menu, X, BookOpen, Settings, Info, Columns } from 'lucide-react';
+import { Menu, X, BookOpen, Settings, Info, Columns, ChevronLeft, Sparkles, Hash } from 'lucide-react';
 import Link from 'next/link';
 
+// Glowing right-edge pull tab — desktop only, shown when sidebar is closed
+function SidebarPullTab() {
+  const { sidebar, toggleSidebar, strongs } = useISA820Store();
+  const hasVerse = !!sidebar.selectedVerseForAnalysis;
+  const hasStrongs = strongs.isOpen;
+
+  if (sidebar.isOpen) return null;
+
+  return (
+    <motion.button
+      initial={{ x: 48, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 48, opacity: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+      onClick={toggleSidebar}
+      aria-label="Open forensic analysis panel"
+      className={`
+        fixed right-0 top-1/2 -translate-y-1/2 z-40 hidden lg:flex
+        flex-col items-center gap-2.5 py-7 px-3
+        rounded-l-2xl border-l border-t border-b backdrop-blur-xl
+        transition-all duration-300 cursor-pointer group
+        ${hasVerse
+          ? 'bg-amber-500/15 border-amber-500/40 shadow-xl shadow-amber-500/20'
+          : 'bg-slate-800/70 border-slate-600/30 hover:bg-slate-700/70 hover:border-slate-500/50'}
+      `}
+    >
+      {hasVerse && (
+        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-lg shadow-amber-400/50" />
+      )}
+      {hasStrongs && !hasVerse && (
+        <Hash className="w-3.5 h-3.5 text-cyan-400" />
+      )}
+      <ChevronLeft className={`w-4 h-4 transition-colors ${hasVerse ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+      <span
+        className={`text-[10px] font-semibold tracking-[0.2em] uppercase transition-colors ${
+          hasVerse ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'
+        }`}
+        style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+      >
+        {hasVerse ? 'Analyse' : 'Analysis'}
+      </span>
+      {hasVerse && (
+        <>
+          <Sparkles className="w-3.5 h-3.5 text-amber-400/70" />
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-lg shadow-amber-400/50" />
+        </>
+      )}
+      {!hasVerse && (
+        <ChevronLeft className={`w-3.5 h-3.5 transition-colors text-slate-600 group-hover:text-slate-400`} />
+      )}
+    </motion.button>
+  );
+}
+
 function HomePage() {
-  const { sidebar, toggleSidebar, isParallelMode } = useISA820Store();
+  const { sidebar, toggleSidebar, isParallelMode, strongs } = useISA820Store();
   const [showInfo, setShowInfo] = useState(false);
+
+  // Contextual FAB label for mobile
+  const hasVerse = !!sidebar.selectedVerseForAnalysis;
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-x-hidden">
-      {/* Aurora background layer */}
+      {/* Aurora background */}
       <div className="aurora-bg" aria-hidden="true" />
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -23,24 +80,32 @@ function HomePage() {
         <motion.button
           onClick={toggleSidebar}
           whileTap={{ scale: 0.92 }}
-          className="fixed bottom-6 right-5 z-50 lg:hidden w-14 h-14 rounded-full btn-primary flex items-center justify-center shadow-xl shadow-amber-900/30"
-          aria-label="Toggle sidebar"
+          className={`fixed bottom-6 right-5 z-50 lg:hidden h-14 rounded-full flex items-center gap-2.5 shadow-xl transition-all ${
+            hasVerse
+              ? 'px-5 btn-primary shadow-amber-900/40'
+              : 'w-14 btn-primary shadow-amber-900/30'
+          }`}
+          aria-label="Toggle analysis sidebar"
         >
-          <motion.div
-            animate={sidebar.isOpen ? { rotate: 90 } : { rotate: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <motion.div animate={sidebar.isOpen ? { rotate: 90 } : { rotate: 0 }} transition={{ duration: 0.2 }}>
             {sidebar.isOpen ? (
-              <X className="w-6 h-6 text-obsidian-900" />
+              <X className="w-5 h-5 text-obsidian-900" />
             ) : (
-              <Menu className="w-6 h-6 text-obsidian-900" />
+              <Menu className="w-5 h-5 text-obsidian-900" />
             )}
           </motion.div>
-          {/* Pulse ring when closed */}
-          {!sidebar.isOpen && (
-            <span className="absolute inset-0 rounded-full border-2 border-amber-400/40 animate-ping" />
+          {!sidebar.isOpen && hasVerse && (
+            <span className="text-xs font-bold text-obsidian-900 pr-1">Analyse</span>
+          )}
+          {!sidebar.isOpen && !hasVerse && (
+            <span className="absolute inset-0 rounded-full border-2 border-amber-400/30 animate-ping" />
           )}
         </motion.button>
+
+        {/* Right-edge pull tab — desktop */}
+        <AnimatePresence>
+          <SidebarPullTab />
+        </AnimatePresence>
 
         {/* Main Content */}
         <main className="flex-1 flex overflow-x-hidden">
@@ -89,11 +154,7 @@ function HomePage() {
                   >
                     <Info className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
-                  <Link
-                    href="/admin"
-                    className="p-2 rounded-lg btn-ghost border-white/0"
-                    aria-label="Admin settings"
-                  >
+                  <Link href="/admin" className="p-2 rounded-lg btn-ghost border-white/0" aria-label="Admin">
                     <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Link>
                 </div>
@@ -101,89 +162,96 @@ function HomePage() {
             </motion.div>
 
             {/* Info Panel */}
-            {showInfo && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="mb-6 glass-card p-4 overflow-hidden"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-white font-medium mb-1.5 text-sm">ISA820 Forensic Standard</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Manuscript-first approach (TAHOT/TBESG) to analyze Scripture.
-                      Voice signatures:&nbsp;
-                      <span className="text-amber-400 font-medium">Gold</span> — Father,&nbsp;
-                      <span className="text-red-400 font-medium">Crimson</span> — Son,&nbsp;
-                      <span className="text-slate-400 font-medium">Silver</span> — Angel.
-                      Click any verse number or Strong's reference for forensic analysis.
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <span className="text-xs px-2 py-1 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">Isaiah 8:20</span>
-                      <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">Deuteronomy 6:4</span>
-                      <span className="text-xs px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded-lg border border-cyan-500/20">Strong's 2.0</span>
-                      <span className="text-xs px-2 py-1 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20">AI Rebuttals</span>
+            <AnimatePresence>
+              {showInfo && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="mb-6 glass-card p-4 overflow-hidden"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-white font-medium mb-1.5 text-sm">ISA820 Forensic Standard</h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Manuscript-first approach (TAHOT/TBESG) to analyze Scripture.
+                        Voice signatures:&nbsp;
+                        <span className="text-amber-400 font-medium">Gold</span> — Father,&nbsp;
+                        <span className="text-red-400 font-medium">Crimson</span> — Son,&nbsp;
+                        <span className="text-slate-400 font-medium">Silver</span> — Angel.
+                        Click any verse to open forensic analysis. Click any highlighted word for Strong's lexicon.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <span className="text-xs px-2 py-1 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">Isaiah 8:20</span>
+                        <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">Deuteronomy 6:4</span>
+                        <span className="text-xs px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded-lg border border-cyan-500/20">Strong's 2.0</span>
+                        <span className="text-xs px-2 py-1 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20">AI Analyst</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Bible Reader */}
             <BibleReader />
           </div>
 
           {/* Desktop Forensic Sidebar */}
-          <div
-            className={`hidden lg:block border-l border-white/5 transition-all flex-shrink-0 ${
-              isParallelMode ? 'w-80' : 'w-96'
-            }`}
-          >
-            <div className="sticky top-[72px] h-[calc(100vh-72px)] overflow-hidden">
-              <ForensicSidebar />
-            </div>
-          </div>
+          <AnimatePresence>
+            {sidebar.isOpen && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: isParallelMode ? 320 : 384, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+                className="hidden lg:block border-l border-white/5 flex-shrink-0 overflow-hidden"
+              >
+                <div className="sticky top-[72px] h-[calc(100vh-72px)] overflow-hidden" style={{ width: isParallelMode ? 320 : 384 }}>
+                  <ForensicSidebar />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Mobile Sidebar Overlay */}
-          {sidebar.isOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 lg:hidden"
-            >
-              <div
-                className="absolute inset-0 bg-black/65 backdrop-blur-sm"
-                onClick={toggleSidebar}
-              />
+          <AnimatePresence>
+            {sidebar.isOpen && (
               <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="absolute right-0 top-0 h-full w-full max-w-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 lg:hidden"
               >
-                <ForensicSidebar />
+                <div
+                  className="absolute inset-0 bg-black/65 backdrop-blur-sm"
+                  onClick={toggleSidebar}
+                />
+                <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  className="absolute right-0 top-0 h-full w-full max-w-sm"
+                >
+                  <ForensicSidebar />
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
+            )}
+          </AnimatePresence>
 
-          {/* Strongs Panel — desktop only */}
-          <div className="fixed right-4 top-24 z-30 hidden lg:block">
-            <StrongsPanel />
-          </div>
+          {/* StrongsPanel — works on all screen sizes */}
+          <StrongsPanel />
         </main>
 
         {/* Footer */}
         <footer className="glass-card rounded-none border-t border-white/5 px-4 sm:px-6 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between text-xs gap-4">
             <div className="flex items-center gap-3">
-              {/* Micro logo */}
               <svg viewBox="0 0 16 16" className="w-4 h-4 flex-shrink-0" aria-hidden="true">
                 <polygon points="8,1 12,2.5 15,6.5 15,9.5 12,13.5 8,15 4,13.5 1,9.5 1,6.5 4,2.5"
                   fill="none" stroke="#f59e0b" strokeWidth="1" opacity="0.6" />
@@ -192,8 +260,9 @@ function HomePage() {
               <span className="text-slate-600 hidden sm:inline">ISA820 · The Forensic Standard</span>
               <span className="text-slate-600 sm:hidden">ISA820</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-slate-800/60 rounded-md text-slate-500 border border-white/5">
+            <div className="flex items-center gap-3">
+              <Link href="/guide" className="text-slate-600 hover:text-slate-400 transition-colors">How to Use</Link>
+              <span className="px-2 py-1 bg-slate-800/60 rounded-md text-slate-600 border border-white/5">
                 TAHOT · TBESG · KJV
               </span>
             </div>

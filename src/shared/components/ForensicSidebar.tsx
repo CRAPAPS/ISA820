@@ -228,9 +228,10 @@ export function ForensicSidebar() {
               </h2>
               <button
                 onClick={toggleSidebar}
-                className="p-1.5 rounded-lg btn-ghost border-white/0 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/60 border border-slate-600/50 text-slate-300 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all text-xs font-medium"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
+                Close
               </button>
             </div>
 

@@ -574,6 +574,24 @@ export function BibleReader() {
         secondaryTranslation={isParallelMode ? effectiveSecondaryTranslation : undefined}
       />
 
+      {/* Parallel column headers */}
+      {isParallelMode && (
+        <div className="grid grid-cols-2 gap-3 px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/25 font-medium">
+              {effectiveTranslation}
+            </span>
+            <span className="text-xs text-slate-600 hidden sm:inline">Primary</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 font-medium">
+              {effectiveSecondaryTranslation}
+            </span>
+            <span className="text-xs text-slate-600 hidden sm:inline">Parallel</span>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         <motion.div
           key={`${book}-${chapter}-${effectiveTranslation}`}
@@ -585,14 +603,16 @@ export function BibleReader() {
             ? verses.map((v, i) => {
                 const dimmed = speakerFilter !== 'ALL' && v.speaker !== speakerFilter;
                 return (
-                  <div key={v.id} className={`grid grid-cols-1 xl:grid-cols-2 gap-4 transition-opacity ${dimmed ? 'opacity-25' : ''}`}>
-                    <VerseCard verse={v} isCurrent={i === verseIdx} onSelect={() => setVerseIdx(i)} />
-                    {secondaryByVerse[v.verse]
-                      ? <VerseCard verse={secondaryByVerse[v.verse]} isCurrent={i === verseIdx} onSelect={() => setVerseIdx(i)} />
-                      : <div className="glass-card p-5 flex items-center justify-center text-slate-600 text-sm italic">
-                          No {v.chapter}:{v.verse} in secondary translation
-                        </div>
-                    }
+                  <div key={v.id} className={`transition-opacity ${dimmed ? 'opacity-25' : ''}`}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <VerseCard verse={v} isCurrent={i === verseIdx} onSelect={() => setVerseIdx(i)} />
+                      {secondaryByVerse[v.verse]
+                        ? <VerseCard verse={secondaryByVerse[v.verse]} isCurrent={i === verseIdx} onSelect={() => setVerseIdx(i)} />
+                        : <div className="glass-card p-4 flex items-center justify-center text-slate-600 text-sm italic rounded-xl">
+                            No {v.chapter}:{v.verse} in secondary translation
+                          </div>
+                      }
+                    </div>
                   </div>
                 );
               })

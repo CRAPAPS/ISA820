@@ -107,7 +107,7 @@ export const useISA820Store = create<ISA820Store>()(
     
     // Sidebar State
     sidebar: {
-      isOpen: true,
+      isOpen: false,
       currentTopic: null,
       forensicCards: [],
       isLoading: false,
