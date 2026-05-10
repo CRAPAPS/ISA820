@@ -261,7 +261,7 @@ function HomePage() {
               <span className="text-slate-600 sm:hidden">ISA820</span>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/guide" className="text-slate-600 hover:text-slate-400 transition-colors">How to Use</Link>
+              <Link href="/guide" className="text-slate-500 hover:text-amber-400 transition-colors font-medium">How to Use</Link>
               <span className="px-2 py-1 bg-slate-800/60 rounded-md text-slate-600 border border-white/5">
                 TAHOT · TBESG · KJV
               </span>

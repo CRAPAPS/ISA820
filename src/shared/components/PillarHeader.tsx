@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { HelpCircle } from 'lucide-react';
 import { useISA820Store } from '@/store/isa820-store';
 import { Tooltip } from './Tooltip';
 import { PassageSelector } from './PassageSelector';
@@ -275,12 +276,14 @@ export function PillarHeader() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Guide link — desktop only */}
+          {/* Guide link — icon on mobile, text on desktop */}
           <Link
             href="/guide"
-            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg btn-ghost text-xs font-medium"
+            className="flex items-center gap-1.5 px-2 lg:px-3 py-2 lg:py-1.5 rounded-xl btn-ghost text-xs font-medium"
+            title="How to Use"
           >
-            How to Use
+            <HelpCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">How to Use</span>
           </Link>
 
           {/* Primary translation */}
