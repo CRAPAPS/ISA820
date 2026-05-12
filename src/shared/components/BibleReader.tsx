@@ -187,6 +187,8 @@ function VerseCard({
   const isAnalysed = sidebar.selectedVerseForAnalysis?.id === verse.id;
   const pillars = verse.pillar_tags || [];
   const strongs = verse.strongs_numbers || [];
+  const textTokens = verse.text.trim().split(/\s+/);
+  const canInlineTAHOT = !verse.word_strongs && strongs.length > 0 && textTokens.length === strongs.length;
 
   // Extract content words for image search — 4+ chars, has a Strong's ID (excludes
   // particles/conjunctions that have no visual meaning), deduplicated.
@@ -279,25 +281,21 @@ function VerseCard({
         </div>
       </div>
 
-      {/* Verse text — inline Strong's when word_strongs available, else plain */}
-      {verse.word_strongs && verse.word_strongs.length > 0 ? (
-        <p className={`bible-text leading-relaxed text-base ${getVoiceClass(verse.speaker as VoiceSpeaker)}`}>
-          {verse.word_strongs.map((tok, i) =>
-            tok.s ? (
-              <InlineStrongsWord key={i} text={tok.t} strongsId={tok.s} />
-            ) : (
-              <span key={i}>{tok.t}</span>
+      {/* Verse text — word_strongs (KJV), TAHOT zip, or plain */}
+      <p className={`bible-text leading-relaxed text-base ${getVoiceClass(verse.speaker as VoiceSpeaker)}`}>
+        {verse.word_strongs && verse.word_strongs.length > 0
+          ? verse.word_strongs.map((tok, i) =>
+              tok.s ? <InlineStrongsWord key={i} text={tok.t} strongsId={tok.s} />
+                    : <span key={i}>{tok.t}</span>
             )
-          )}
-        </p>
-      ) : (
-        <p className={`bible-text leading-relaxed text-base ${getVoiceClass(verse.speaker as VoiceSpeaker)}`}>
-          {verse.text}
-        </p>
-      )}
+          : canInlineTAHOT
+            ? textTokens.map((tok, i) => <InlineStrongsWord key={i} text={tok} strongsId={strongs[i]} />)
+            : verse.text
+        }
+      </p>
 
-      {/* Fallback chip row — shown only when no inline word_strongs data */}
-      {!verse.word_strongs && strongs.length > 0 && (
+      {/* Fallback chip row — only when token count mismatches strongs_numbers */}
+      {!verse.word_strongs && strongs.length > 0 && !canInlineTAHOT && (
         <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700/30">
           <span className="text-xs text-slate-600 self-center mr-1">Strong&apos;s:</span>
           {strongs.slice(0, 12).map(sid => <StrongsChip key={sid} strongsId={sid} />)}

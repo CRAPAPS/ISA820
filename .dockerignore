@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output
+.next
+out
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Environment (keep .env.example only)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+README.md
+DEPLOYMENT.md
+AGENTS.md
+CLAUDE.md
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+*.log
+.cache
