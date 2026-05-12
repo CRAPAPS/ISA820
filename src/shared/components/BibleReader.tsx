@@ -9,7 +9,7 @@ import type { Verse as DBVerse } from '@/lib/supabase';
 import type { Verse as UIVerse, PillarType, VoiceSpeaker } from '@/types';
 import { Tooltip } from './Tooltip';
 import {
-  MessageSquare, ChevronRight, Sparkles, Loader2,
+  MessageSquare, ChevronRight, Sparkles,
   BookOpen, ChevronLeft, AlertCircle,
 } from 'lucide-react';
 import { RelatedMedia } from './RelatedMedia';
@@ -139,39 +139,80 @@ function InlineStrongsWord({ text, strongsId }: { text: string; strongsId: strin
   );
 }
 
-// ── Strong's chip ────────────────────────────────────────────────────────────
-function StrongsChip({ strongsId }: { strongsId: string }) {
-  const { openStrongsPanel } = useISA820Store();
-  const [fetching, setFetching] = useState(false);
+// ── Interlinear row for TAHOT/TBESG — batch-fetches Hebrew/Greek words ──────
+type LexEntry = { word: string; transliteration: string; definition: string };
 
-  const handleClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (fetching) return;
-    setFetching(true);
-    try {
-      const { data } = await supabase
-        .from('strongs_lexicon').select('*').eq('strongs_id', strongsId).single();
-      if (data) {
-        openStrongsPanel({
-          word: data.word || strongsId,
-          strongsId: data.strongs_id,
-          transliteration: data.transliteration || '',
-          definition: data.definition || '',
-          usageCount: data.usage_count || 0,
-          position: { start: 0, end: 0 },
+function InterlinearRow({ strongsIds }: { strongsIds: string[] }) {
+  const { openStrongsPanel } = useISA820Store();
+  const [entries, setEntries] = useState<Record<string, LexEntry>>({});
+
+  useEffect(() => {
+    if (strongsIds.length === 0) return;
+    supabase
+      .from('strongs_lexicon')
+      .select('strongs_id,word,transliteration,definition')
+      .in('strongs_id', strongsIds)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, LexEntry> = {};
+        data.forEach(e => {
+          map[e.strongs_id] = { word: e.word || '', transliteration: e.transliteration || '', definition: e.definition || '' };
         });
-      }
-    } finally { setFetching(false); }
+        setEntries(map);
+      });
+  }, [strongsIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const open = (sid: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const lex = entries[sid];
+    openStrongsPanel({
+      word: lex?.word || sid,
+      strongsId: sid,
+      transliteration: lex?.transliteration || '',
+      definition: lex?.definition || '',
+      usageCount: 0,
+      position: { start: 0, end: 0 },
+    });
   };
 
   return (
-    <button onClick={handleClick}
-      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors"
-      title={`Open ${strongsId} in lexicon`}
-    >
-      {fetching ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : null}
-      {strongsId}
-    </button>
+    <div className="mt-3 pt-3 border-t border-slate-700/30">
+      <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2">
+        Interlinear — click any word to open lexicon
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {strongsIds.map(sid => {
+          const lex = entries[sid];
+          return (
+            <button
+              key={sid}
+              onClick={(e) => open(sid, e)}
+              title={lex ? `${lex.word} — ${lex.definition}` : sid}
+              className="flex flex-col items-center px-2.5 py-2 rounded-lg bg-slate-800/70 border border-cyan-500/20 hover:bg-cyan-500/10 hover:border-cyan-400/40 transition-all min-w-[52px] group"
+            >
+              {lex ? (
+                <>
+                  <span
+                    className="text-sm text-slate-100 leading-tight group-hover:text-cyan-200 transition-colors"
+                    style={{ fontFamily: 'var(--font-spectral), serif' }}
+                  >
+                    {lex.word}
+                  </span>
+                  <span className="text-[9px] text-cyan-400/70 italic leading-none mt-0.5">
+                    {lex.transliteration}
+                  </span>
+                  <span className="text-[8px] font-mono text-slate-600 leading-none mt-1">
+                    {sid}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs font-mono text-cyan-400">{sid}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -294,15 +335,9 @@ function VerseCard({
         }
       </p>
 
-      {/* Fallback chip row — only when token count mismatches strongs_numbers */}
+      {/* Interlinear row — TAHOT/TBESG verses with no word-level mapping */}
       {!verse.word_strongs && strongs.length > 0 && !canInlineTAHOT && (
-        <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700/30">
-          <span className="text-xs text-slate-600 self-center mr-1">Strong&apos;s:</span>
-          {strongs.slice(0, 12).map(sid => <StrongsChip key={sid} strongsId={sid} />)}
-          {strongs.length > 12 && (
-            <span className="text-xs text-slate-600 self-center">+{strongs.length - 12} more</span>
-          )}
-        </div>
+        <InterlinearRow strongsIds={strongs} />
       )}
 
       {/* Pillar tags */}
