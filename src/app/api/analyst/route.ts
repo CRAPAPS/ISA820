@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     try {
       const genAI = new GoogleGenerativeAI(geminiKey);
       const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         systemInstruction: SYSTEM_INSTRUCTION,
       });
       const result = await model.generateContentStream(userPrompt);
@@ -99,11 +99,12 @@ export async function POST(req: Request) {
         },
       });
     } catch (err) {
-      if (!isGeminiQuotaError(err)) {
+      // Fall through to Claude on ANY Gemini failure (quota, deprecated model, network, etc.)
+      // Only abort early if there is also no Anthropic key to fall back to
+      if (!process.env.ANTHROPIC_API_KEY) {
         const msg = err instanceof Error ? err.message : String(err);
         return new Response(`Analyst error: ${msg}`, { status: 502 });
       }
-      // Quota exhausted — fall through to Anthropic
     }
   }
 

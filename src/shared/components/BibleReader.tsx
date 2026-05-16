@@ -124,13 +124,14 @@ function InlineStrongsWord({ text, strongsId }: { text: string; strongsId: strin
   return (
     <button
       onClick={handleClick}
+      aria-label={`Strong's ${strongsId} — click to look up`}
       title={`${strongsId} — click to look up`}
-      className="inline-flex flex-col items-center leading-none mr-[0.15em] group align-baseline hover:text-cyan-300 transition-colors"
+      className="inline-flex flex-col items-center leading-none mr-[0.15em] group align-baseline hover:text-cyan-200 transition-colors"
     >
       <span className="relative">
         {text}
         <sup className={`ml-[1px] text-[0.6em] font-mono transition-colors ${
-          fetching ? 'text-slate-500' : 'text-cyan-500/70 group-hover:text-cyan-400'
+          fetching ? 'text-slate-500' : 'text-cyan-400 drop-shadow-[0_0_4px_rgba(34,211,238,0.5)] group-hover:text-cyan-200'
         }`}>
           {strongsId}
         </sup>
@@ -187,8 +188,9 @@ function InterlinearRow({ strongsIds }: { strongsIds: string[] }) {
             <button
               key={sid}
               onClick={(e) => open(sid, e)}
+              aria-label={`Look up Strong's ${sid}`}
               title={lex ? `${lex.word} — ${lex.definition}` : sid}
-              className="flex flex-col items-center px-2.5 py-2 rounded-lg bg-slate-800/70 border border-cyan-500/20 hover:bg-cyan-500/10 hover:border-cyan-400/40 transition-all min-w-[52px] group"
+              className="flex flex-col items-center px-2.5 py-2 rounded-lg bg-slate-800/70 border border-cyan-400/35 hover:bg-cyan-500/20 hover:border-cyan-300/60 transition-all min-w-[52px] group"
             >
               {lex ? (
                 <>
@@ -198,10 +200,10 @@ function InterlinearRow({ strongsIds }: { strongsIds: string[] }) {
                   >
                     {lex.word}
                   </span>
-                  <span className="text-[9px] text-cyan-400/70 italic leading-none mt-0.5">
+                  <span className="text-[9px] text-cyan-300 italic leading-none mt-0.5">
                     {lex.transliteration}
                   </span>
-                  <span className="text-[8px] font-mono text-slate-600 leading-none mt-1">
+                  <span className="text-[8px] font-mono text-cyan-500/80 leading-none mt-1">
                     {sid}
                   </span>
                 </>
@@ -267,6 +269,7 @@ function VerseCard({
           {/* Verse number badge */}
           <button
             onClick={e => { e.stopPropagation(); handleClick(); }}
+            aria-label={`Verse ${verse.verse} — click to analyse`}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-sm transition-all ${
               isCurrent
                 ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40'

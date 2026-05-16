@@ -408,16 +408,26 @@ body {
 
 /* ─── Strong's Word Links ─── */
 .strongs-link {
-  color: var(--accent-secondary);
+  color: #22d3ee;
   cursor: pointer;
-  border-bottom: 1px dashed var(--accent-secondary);
+  border-bottom: 1px solid rgba(34, 211, 238, 0.5);
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
   transition: all 0.2s ease;
 }
 
 .strongs-link:hover {
-  color: var(--accent-primary);
-  background: rgba(139, 92, 246, 0.1);
-  border-bottom-style: solid;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.12);
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
+  border-bottom-color: rgba(103, 232, 249, 0.7);
+}
+
+/* ─── Keyboard focus rings ─── */
+[role="button"]:focus-visible,
+button:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 /* ─── Tooltip Styles ─── */
