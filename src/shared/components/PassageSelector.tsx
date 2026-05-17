@@ -89,52 +89,35 @@ interface SearchResult {
 }
 
 function parsePassage(input: string): SearchResult | null {
-  const normalized = input.trim().toLowerCase();
-  
-  // Try full book name or abbreviation
-  for (const passage of PASSAGE_INDEX) {
-    const bookLower = passage.book.toLowerCase();
-    const abbrevLower = passage.abbrev.toLowerCase();
-    
-    // Full book name match
-    if (bookLower === normalized) {
-      return { book: passage.book, abbrev: passage.abbrev, fullMatch: input };
-    }
-    
-    // Abbreviation match
-    if (abbrevLower === normalized || bookLower.startsWith(normalized)) {
-      return { book: passage.book, abbrev: passage.abbrev, fullMatch: input };
-    }
-    
-    // Chapter match: "Gen 1" or "Genesis 1"
-    const chapterMatch = normalized.match(new RegExp(`^${bookLower}\\s+(\\d+)$`));
-    if (chapterMatch) {
-      const chapter = parseInt(chapterMatch[1]);
-      if (chapter >= 1 && chapter <= passage.chapters) {
-        return { book: passage.book, abbrev: passage.abbrev, chapter, fullMatch: input };
-      }
-    }
-    
-    const abbrevChapterMatch = normalized.match(new RegExp(`^${abbrevLower}\\s+(\\d+)$`));
-    if (abbrevChapterMatch) {
-      const chapter = parseInt(abbrevChapterMatch[1]);
-      if (chapter >= 1 && chapter <= passage.chapters) {
-        return { book: passage.book, abbrev: passage.abbrev, chapter, fullMatch: input };
-      }
-    }
-    
-    // Verse match: "Gen 1:1" or "Genesis 1:1"
-    const verseMatch = normalized.match(new RegExp(`^${bookLower}\\s+(\\d+):(\\d+)$`));
-    if (verseMatch) {
-      return { book: passage.book, abbrev: passage.abbrev, chapter: parseInt(verseMatch[1]), verse: parseInt(verseMatch[2]), fullMatch: input };
-    }
+  if (!input.trim()) return null;
 
-    const abbrevVerseMatch = normalized.match(new RegExp(`^${abbrevLower}\\s+(\\d+):(\\d+)$`));
-    if (abbrevVerseMatch) {
-      return { book: passage.book, abbrev: passage.abbrev, chapter: parseInt(abbrevVerseMatch[1]), verse: parseInt(abbrevVerseMatch[2]), fullMatch: input };
+  // Normalize: "1cor" → "1 cor", "john3" → "john 3", collapse spaces
+  let s = input.trim().toLowerCase().replace(/[.,;!?]/g, '');
+  s = s.replace(/^([123])\s*([a-z])/, '$1 $2');
+  s = s.replace(/([a-z])(\d)/g, '$1 $2');
+  s = s.replace(/\s+/g, ' ').trim();
+
+  for (const passage of PASSAGE_INDEX) {
+    const bookLow   = passage.book.toLowerCase();
+    const abbrevLow = passage.abbrev.toLowerCase();
+
+    let rest: string | null = null;
+    if      (s === bookLow || s === abbrevLow) rest = '';
+    else if (s.startsWith(bookLow + ' '))      rest = s.slice(bookLow.length).trim();
+    else if (s.startsWith(abbrevLow + ' '))    rest = s.slice(abbrevLow.length).trim();
+
+    if (rest === null) continue;
+    if (rest === '') return { book: passage.book, abbrev: passage.abbrev, fullMatch: input };
+
+    // Accept "3", "3:16", or "3 16" (space as verse separator)
+    const nums = rest.split(/[:\s]+/).map(Number).filter(n => !isNaN(n) && n > 0);
+    const chapter = nums[0];
+    const verse   = nums[1];
+    if (!chapter || chapter < 1 || chapter > passage.chapters) {
+      return { book: passage.book, abbrev: passage.abbrev, fullMatch: input };
     }
+    return { book: passage.book, abbrev: passage.abbrev, chapter, verse, fullMatch: input };
   }
-  
   return null;
 }
 
@@ -257,7 +240,7 @@ export function PassageSelector() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Type 'John 3' or 'Gen 1:1'..."
+                    placeholder='"Gen 1", "John 3:16", "Isa 8 20", "1cor 13"…'
                     className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {

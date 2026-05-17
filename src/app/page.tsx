@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PillarHeader, BibleReader, ForensicSidebar, StrongsPanel } from '@/shared/components';
 import { useISA820Store } from '@/store/isa820-store';
 import { Menu, X, BookOpen, Settings, Info, Columns, ChevronLeft, Sparkles, Hash } from 'lucide-react';
+import { QuickNavButton } from '@/shared/components/QuickNav';
 import Link from 'next/link';
 
 // Glowing right-edge pull tab — desktop only, shown when sidebar is closed
@@ -68,39 +69,48 @@ function HomePage() {
   // Contextual FAB label for mobile
   const hasVerse = !!sidebar.selectedVerseForAnalysis;
 
+  // overflow-x-hidden removed from outer div — it breaks position:fixed on mobile Safari/Chrome
   return (
-    <div className="min-h-screen flex flex-col relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col relative">
       {/* Aurora background */}
       <div className="aurora-bg" aria-hidden="true" />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <PillarHeader />
 
-        {/* Mobile Toggle FAB */}
+        {/* LEFT FAB — orange Topics / sidebar toggle, always visible on mobile */}
         <motion.button
           onClick={toggleSidebar}
           whileTap={{ scale: 0.92 }}
-          className={`fixed bottom-6 right-5 z-50 lg:hidden h-14 rounded-full flex items-center gap-2.5 shadow-xl transition-all ${
-            hasVerse
-              ? 'px-5 btn-primary shadow-amber-900/40'
-              : 'w-14 btn-primary shadow-amber-900/30'
-          }`}
-          aria-label="Toggle analysis sidebar"
+          className="fixed bottom-6 left-5 z-50 lg:hidden w-14 h-14 rounded-full flex items-center justify-center shadow-xl btn-primary shadow-amber-900/30"
+          aria-label={sidebar.isOpen ? 'Close analysis panel' : 'Open topics & analysis'}
         >
           <motion.div animate={sidebar.isOpen ? { rotate: 90 } : { rotate: 0 }} transition={{ duration: 0.2 }}>
-            {sidebar.isOpen ? (
-              <X className="w-5 h-5 text-obsidian-900" />
-            ) : (
-              <Menu className="w-5 h-5 text-obsidian-900" />
-            )}
+            {sidebar.isOpen ? <X className="w-5 h-5 text-obsidian-900" /> : <Menu className="w-5 h-5 text-obsidian-900" />}
           </motion.div>
-          {!sidebar.isOpen && hasVerse && (
-            <span className="text-xs font-bold text-obsidian-900 pr-1">Analyse</span>
-          )}
-          {!sidebar.isOpen && !hasVerse && (
+          {!sidebar.isOpen && (
             <span className="absolute inset-0 rounded-full border-2 border-amber-400/30 animate-ping" />
           )}
         </motion.button>
+
+        {/* RIGHT FAB — cyan Analyse button, appears when a verse is selected */}
+        <AnimatePresence>
+          {hasVerse && !sidebar.isOpen && (
+            <motion.button
+              key="analyst-fab"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={toggleSidebar}
+              className="fixed bottom-6 right-5 z-50 lg:hidden h-14 px-5 rounded-full flex items-center gap-2 shadow-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 backdrop-blur-sm"
+              aria-label="Open forensic analysis"
+            >
+              <Sparkles className="w-4 h-4 flex-shrink-0" />
+              <span className="text-xs font-bold">Analyse</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* Right-edge pull tab — desktop */}
         <AnimatePresence>
@@ -143,6 +153,7 @@ function HomePage() {
                   )}
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
+                  <QuickNavButton />
                   <button
                     onClick={() => setShowInfo(!showInfo)}
                     className={`p-2 rounded-lg border transition-all ${
