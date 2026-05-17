@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useISA820Store } from '@/store/isa820-store';
 import { scriptureService } from '@/server/services';
 import { supabase } from '@/lib/supabase';
@@ -694,6 +695,23 @@ function NavBar({
   isFirst: boolean; isLast: boolean;
   translation: string; secondaryTranslation?: string;
 }) {
+  const router = useRouter();
+  const { setCurrentPassage } = useISA820Store();
+  const [jumpBook, setJumpBook]       = useState(book);
+  const [jumpChapter, setJumpChapter] = useState(chapter);
+  const [jumpVerse, setJumpVerse]     = useState('');
+
+  useEffect(() => { setJumpBook(book); setJumpChapter(chapter); }, [book, chapter]);
+
+  const jumpMaxChap = BOOK_CHAPTERS[jumpBook] ?? 1;
+
+  const handleJump = () => {
+    const v = jumpVerse ? parseInt(jumpVerse, 10) : undefined;
+    setCurrentPassage({ book: jumpBook, chapter: jumpChapter, verse: v });
+    router.push(`/read/${encodeURIComponent(jumpBook)}/${jumpChapter}`);
+    setJumpVerse('');
+  };
+
   const isFirstChap = bookIdx === 0 && chapter === 1;
   const isLastChap  = bookIdx === BOOK_ORDER.length - 1 && chapter === maxChap;
 
@@ -790,6 +808,45 @@ function NavBar({
         >
           <span className="hidden sm:inline truncate max-w-[80px]">{nextChapLabel}</span>
           <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Third row — jump to any book / chapter / verse */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-slate-900/60 border-t border-slate-700/30">
+        <select
+          value={jumpBook}
+          onChange={e => { setJumpBook(e.target.value); setJumpChapter(1); }}
+          aria-label="Select book"
+          className="flex-1 min-w-0 bg-slate-800/60 border border-slate-700/40 rounded-lg text-xs text-slate-300 px-2 py-1.5 focus:outline-none focus:border-amber-500/50 cursor-pointer"
+        >
+          {BOOK_ORDER.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <select
+          value={jumpChapter}
+          onChange={e => setJumpChapter(Number(e.target.value))}
+          aria-label="Select chapter"
+          className="w-16 bg-slate-800/60 border border-slate-700/40 rounded-lg text-xs text-slate-300 px-2 py-1.5 focus:outline-none focus:border-amber-500/50 cursor-pointer"
+        >
+          {Array.from({ length: jumpMaxChap }, (_, i) => i + 1).map(ch => (
+            <option key={ch} value={ch}>{ch}</option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min="1"
+          placeholder="v."
+          value={jumpVerse}
+          onChange={e => setJumpVerse(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleJump(); }}
+          aria-label="Verse number (optional)"
+          className="w-12 bg-slate-800/60 border border-slate-700/40 rounded-lg text-xs text-slate-300 px-2 py-1.5 focus:outline-none focus:border-amber-500/50 [appearance:textfield] placeholder-slate-600"
+        />
+        <button
+          onClick={handleJump}
+          aria-label="Go to selected passage"
+          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 hover:border-amber-500/50 transition-all flex-shrink-0"
+        >
+          Go
         </button>
       </div>
     </div>
