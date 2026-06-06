@@ -11,7 +11,7 @@ import type { Verse as UIVerse, PillarType, VoiceSpeaker } from '@/types';
 import { Tooltip } from './Tooltip';
 import {
   MessageSquare, ChevronRight, Sparkles,
-  BookOpen, ChevronLeft, AlertCircle,
+  BookOpen, ChevronLeft, AlertCircle, Hash,
 } from 'lucide-react';
 import { RelatedMedia } from './RelatedMedia';
 
@@ -228,11 +228,13 @@ function VerseCard({
   onSelect: () => void;
 }) {
   const { triggerPillarPulse, openSidebarForVerse, sidebar } = useISA820Store();
+  const [showStrongs, setShowStrongs] = useState(false);
   const isAnalysed = sidebar.selectedVerseForAnalysis?.id === verse.id;
   const pillars = verse.pillar_tags || [];
   const strongs = verse.strongs_numbers || [];
   const textTokens = verse.text.trim().split(/\s+/);
   const canInlineTAHOT = !verse.word_strongs && strongs.length > 0 && textTokens.length === strongs.length;
+  const hasStrongsData = (verse.word_strongs != null && verse.word_strongs.some(t => t.s)) || strongs.length > 0;
 
   // Extract content words for image search — 4+ chars, has a Strong's ID (excludes
   // particles/conjunctions that have no visual meaning), deduplicated.
@@ -311,6 +313,26 @@ function VerseCard({
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-600">{verse.translation}</span>
+          {hasStrongsData && (
+            <Tooltip content={{
+              title: "Strong's Overlay",
+              description: 'Toggle Strong\'s numbers on each word. Click any number to open the lexicon.',
+              spiritualLogic: 'Reveal the original language root behind every word in this verse.',
+            }}>
+              <button
+                onClick={e => { e.stopPropagation(); setShowStrongs(s => !s); }}
+                aria-label="Toggle Strong's overlay"
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-mono font-semibold transition-all ${
+                  showStrongs
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'text-slate-600 hover:bg-slate-700/50 hover:text-slate-400'
+                }`}
+              >
+                <Hash className="w-3 h-3" />
+                S
+              </button>
+            </Tooltip>
+          )}
           <Tooltip content={{
             title: 'Forensic Analysis',
             description: 'Open the sidebar with topic analysis for this verse.',
@@ -326,21 +348,21 @@ function VerseCard({
         </div>
       </div>
 
-      {/* Verse text — word_strongs (KJV), TAHOT zip, or plain */}
+      {/* Verse text — plain by default; Strong's overlay when toggled */}
       <p className={`bible-text leading-relaxed text-base ${getVoiceClass(verse.speaker as VoiceSpeaker)}`}>
-        {verse.word_strongs && verse.word_strongs.length > 0
+        {showStrongs && verse.word_strongs && verse.word_strongs.length > 0
           ? verse.word_strongs.map((tok, i) =>
               tok.s ? <InlineStrongsWord key={i} text={tok.t} strongsId={tok.s} />
                     : <span key={i}>{tok.t}</span>
             )
-          : canInlineTAHOT
+          : showStrongs && canInlineTAHOT
             ? textTokens.map((tok, i) => <InlineStrongsWord key={i} text={tok} strongsId={strongs[i]} />)
             : verse.text
         }
       </p>
 
-      {/* Interlinear row — TAHOT/TBESG verses with no word-level mapping */}
-      {!verse.word_strongs && strongs.length > 0 && !canInlineTAHOT && (
+      {/* Interlinear row — shown only when Strong's overlay is on, for verses with no word-level mapping */}
+      {showStrongs && !verse.word_strongs && strongs.length > 0 && !canInlineTAHOT && (
         <InterlinearRow strongsIds={strongs} />
       )}
 

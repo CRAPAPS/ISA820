@@ -26,9 +26,13 @@ const CONFIDENCE_COLORS = {
 };
 
 function parseVerseLink(ref: string): string {
-  const m = ref.match(/^(.+?)\s+(\d+)(?::\d+)?$/);
-  if (!m) return '/';
-  return `/read/${encodeURIComponent(m[1])}/${m[2]}`;
+  // "Genesis 1:4" → "/read/Genesis/1#bv-4"
+  // "1 Kings 3:5" → "/read/1%20Kings/3#bv-5"
+  const m = ref.match(/^(.+?)\s+(\d+):(\d+)$/);
+  if (m) return `/read/${encodeURIComponent(m[1])}/${m[2]}#bv-${m[3]}`;
+  const m2 = ref.match(/^(.+?)\s+(\d+)$/);
+  if (m2) return `/read/${encodeURIComponent(m2[1])}/${m2[2]}`;
+  return '/';
 }
 
 function TopicCard({ item }: { item: SpiritualUnderstanding }) {

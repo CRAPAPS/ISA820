@@ -19,8 +19,9 @@ interface LexEntry {
   word: string;
   transliteration: string;
   definition: string;
+  part_of_speech: string;
+  pronunciation_guide: string;
   usage_count: number;
-  extended_definition?: string;
 }
 
 function useIsMobile() {
@@ -64,8 +65,9 @@ export function StrongsPanel() {
             word: data.word || word.strongsId,
             transliteration: data.transliteration || '',
             definition: data.definition || 'No definition available',
+            part_of_speech: data.part_of_speech || '',
+            pronunciation_guide: data.pronunciation_guide || '',
             usage_count: data.usage_count || 0,
-            extended_definition: data.extended_definition || data.notes || '',
           });
         } else {
           setLexEntry(null);
@@ -178,54 +180,78 @@ export function StrongsPanel() {
             {/* Content */}
             <div className={`p-4 space-y-5 overflow-y-auto scrollbar-hide ${isMobile ? 'flex-1' : 'max-h-[75vh]'}`}>
 
-              {/* Definition */}
-              <div>
-                <h4 className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2">Definition</h4>
-                {lexLoading ? (
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Fetching lexicon…</span>
-                  </div>
-                ) : (
-                  <p className="text-slate-100 leading-relaxed bible-text text-sm">
-                    {isRealDef
-                      ? displayDef
-                      : <span className="text-slate-500 italic">No definition in database for {word.strongsId}</span>
-                    }
-                  </p>
-                )}
-              </div>
-
-              {/* Lexicon card */}
-              {!lexLoading && (lexEntry || isRealDef) && (
-                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/40">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-xs font-medium text-amber-400">STEPBible Lexicon</span>
-                  </div>
-                  <div className="space-y-2">
+              {/* Lexicon entry */}
+              {lexLoading ? (
+                <div className="flex items-center gap-2 py-3 text-slate-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Fetching lexicon…</span>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/40 space-y-3">
+                  {/* Word + language badge */}
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-cyan-400 font-mono text-base">{displayWord}</span>
+                      <span className="text-cyan-300 font-mono text-lg leading-none">{displayWord}</span>
                       {displayTranslit && (
-                        <span className="text-slate-400 text-sm">({displayTranslit})</span>
+                        <span className="text-slate-300 text-sm italic">"{displayTranslit}"</span>
                       )}
-                      <span className="text-xs px-1.5 py-0.5 bg-slate-700/60 rounded text-slate-400">{langLabel}</span>
                     </div>
-                    <p className="text-sm text-slate-300 leading-relaxed">{displayDef}</p>
-                    {lexEntry?.extended_definition && (
-                      <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-700/40 pt-2 mt-2">
-                        {lexEntry.extended_definition}
-                      </p>
-                    )}
+                    <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      langLabel === 'Hebrew'
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+                    }`}>{langLabel}</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="text-xs px-2 py-1 bg-slate-700/50 rounded text-slate-400">{langLabel}</span>
+
+                  {/* Pronunciation + part of speech row */}
+                  <div className="flex flex-wrap gap-2">
+                    {lexEntry?.pronunciation_guide && (
+                      <span className="text-[11px] px-2 py-0.5 bg-slate-700/60 rounded text-slate-300 font-mono">
+                        /{lexEntry.pronunciation_guide}/
+                      </span>
+                    )}
+                    {lexEntry?.part_of_speech && (
+                      <span className="text-[11px] px-2 py-0.5 bg-indigo-500/15 rounded border border-indigo-500/30 text-indigo-300 capitalize">
+                        {lexEntry.part_of_speech}
+                      </span>
+                    )}
                     {(lexEntry?.usage_count || word.usageCount) > 0 && (
-                      <span className="text-xs px-2 py-1 bg-slate-700/50 rounded text-slate-400">
-                        {lexEntry?.usage_count || word.usageCount} occurrences
+                      <span className="text-[11px] px-2 py-0.5 bg-slate-700/40 rounded text-slate-500">
+                        {lexEntry?.usage_count || word.usageCount}× in scripture
                       </span>
                     )}
                   </div>
+
+                  {/* Definition */}
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <BookOpen className="w-3 h-3 text-amber-400" />
+                      <span className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">
+                        Strong&apos;s Definition
+                      </span>
+                    </div>
+                    {isRealDef ? (
+                      <p className="text-slate-100 leading-relaxed bible-text text-sm whitespace-pre-line">
+                        {displayDef}
+                      </p>
+                    ) : (
+                      <p className="text-slate-500 italic text-sm">
+                        No definition in database for {word.strongsId}.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Gloss note: when definition is very short, flag it as a gloss */}
+                  {isRealDef && displayDef.length < 40 && (
+                    <div className="border-t border-slate-700/40 pt-3">
+                      <p className="text-[11px] text-amber-500/80 leading-relaxed">
+                        <span className="font-semibold">Note:</span> The above is the Strong&apos;s gloss — the
+                        minimal English equivalent. The original {langLabel} term carries broader theological
+                        weight. Use the concordance below to observe how this word is used in context across
+                        all {lexEntry?.usage_count || 'many'} scriptural occurrences.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
