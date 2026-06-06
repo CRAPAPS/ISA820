@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, FileText, Library } from 'lucide-react';
 import { useISA820Store } from '@/store/isa820-store';
 import { Tooltip } from './Tooltip';
 import { PassageSelector } from './PassageSelector';
@@ -276,6 +276,26 @@ export function PillarHeader() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Topics link */}
+          <Link
+            href="/topics"
+            className="flex items-center gap-1.5 px-2 lg:px-3 py-2 lg:py-1.5 rounded-xl btn-ghost text-xs font-medium"
+            title="Topics Library"
+          >
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">Topics</span>
+          </Link>
+
+          {/* Library link */}
+          <Link
+            href="/library"
+            className="flex items-center gap-1.5 px-2 lg:px-3 py-2 lg:py-1.5 rounded-xl btn-ghost text-xs font-medium"
+            title="Reference Library"
+          >
+            <Library className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">Library</span>
+          </Link>
+
           {/* Guide link — icon on mobile, text on desktop */}
           <Link
             href="/guide"

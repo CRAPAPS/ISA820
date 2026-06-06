@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useISA820Store } from '@/store/isa820-store';
 import { supabase } from '@/lib/supabase';
 import type { ForensicCard } from '@/types';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import {
   X,
   ChevronDown,
@@ -22,60 +23,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-// Lightweight markdown renderer — handles the sections Gemini produces
-function AnalystMarkdown({ text }: { text: string }) {
-  const lines = text.split('\n');
-  const elements: React.ReactNode[] = [];
-  let key = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (line.startsWith('## ')) {
-      elements.push(
-        <h3 key={key++} className="text-amber-400 font-semibold text-sm mt-4 mb-1.5 first:mt-0 border-b border-amber-500/20 pb-1">
-          {line.replace(/^## /, '')}
-        </h3>
-      );
-    } else if (line.startsWith('### ')) {
-      elements.push(
-        <h4 key={key++} className="text-cyan-400 font-medium text-xs mt-3 mb-1">
-          {line.replace(/^### /, '')}
-        </h4>
-      );
-    } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      const content = line.replace(/^[-*] /, '');
-      elements.push(
-        <li key={key++} className="flex gap-2 text-xs text-slate-300 leading-relaxed ml-2">
-          <span className="text-amber-500 flex-shrink-0 mt-0.5">•</span>
-          <span dangerouslySetInnerHTML={{ __html: renderInline(content) }} />
-        </li>
-      );
-    } else if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
-      elements.push(
-        <p key={key++} className="text-white font-semibold text-xs mt-2">
-          {line.replace(/\*\*/g, '')}
-        </p>
-      );
-    } else if (line.trim() === '' || line.trim() === '---') {
-      elements.push(<div key={key++} className="h-1" />);
-    } else if (line.trim()) {
-      elements.push(
-        <p key={key++} className="text-xs text-slate-300 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
-      );
-    }
-  }
-
-  return <div className="space-y-0.5">{elements}</div>;
-}
-
-function renderInline(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em class="text-slate-200">$1</em>')
-    .replace(/`(.+?)`/g, '<code class="font-mono text-cyan-400 bg-slate-800/60 px-1 rounded text-[0.7em]">$1</code>');
-}
 
 const CARD_ICONS = {
   verse: FileText,
@@ -91,10 +38,11 @@ const CARD_COLORS = {
   understanding: 'border-amber-500/30 bg-amber-500/5',
 };
 
-const TOPICS = [
-  'soul', 'trinity', 'godhead', 'oneness', 
+const TOPICS_FALLBACK = [
+  'soul', 'trinity', 'godhead', 'oneness',
   'alpha-omega', 'father', 'son', 'deity',
-  'genesis', 'revelation', 'yahweh'
+  'genesis', 'revelation', 'yahweh',
+  'knowledge-of-good-and-evil',
 ];
 
 
@@ -113,6 +61,20 @@ export function ForensicSidebar() {
   const [isAnalystLoading, setIsAnalystLoading] = useState(false);
   const [analystQuestion, setAnalystQuestion] = useState('');
   const [analystError, setAnalystError] = useState('');
+  const [dbTopics, setDbTopics] = useState<string[]>([]);
+
+  // Load topic slugs from DB on mount; fall back to static list if empty
+  useEffect(() => {
+    supabase
+      .from('knowledge_base')
+      .select('topic')
+      .order('topic')
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setDbTopics(data.map((r: { topic: string }) => r.topic));
+        }
+      });
+  }, []);
 
   useEffect(() => {
     if (!sidebar.currentTopic) return;
@@ -201,7 +163,11 @@ export function ForensicSidebar() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidebar.selectedVerseForAnalysis]);
 
-  const filteredTopics = TOPICS.filter(t => 
+  const allTopics = dbTopics.length > 0
+    ? [...new Set([...dbTopics, ...TOPICS_FALLBACK])]
+    : TOPICS_FALLBACK;
+
+  const filteredTopics = allTopics.filter(t =>
     t.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -331,7 +297,7 @@ export function ForensicSidebar() {
                   {/* Streaming response */}
                   {analystResponse && (
                     <div className="mb-3 space-y-0.5">
-                      <AnalystMarkdown text={analystResponse} />
+                      <MarkdownRenderer text={analystResponse} />
                       {isAnalystLoading && (
                         <span className="cursor-blink" />
                       )}
@@ -513,9 +479,7 @@ export function ForensicSidebar() {
                               )}
 
                               {/* Text Content */}
-                              <p className="text-sm text-slate-300 leading-relaxed">
-                                {card.content}
-                              </p>
+                              <MarkdownRenderer text={card.content} />
 
                               {/* Topic Tags */}
                               <div className="flex flex-wrap gap-2">
