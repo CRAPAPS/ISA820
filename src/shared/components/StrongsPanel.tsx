@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useISA820Store } from '@/store/isa820-store';
 import { supabase } from '@/lib/supabase';
-import { X, BookOpen, Hash, ExternalLink, Loader2, ChevronDown } from 'lucide-react';
+import { X, BookOpen, Hash, ExternalLink, Loader2, ChevronDown, Sparkles } from 'lucide-react';
 import { RelatedMedia } from './RelatedMedia';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface UsageRow {
   book: string;
@@ -46,6 +47,9 @@ export function StrongsPanel() {
   const [lexLoading, setLexLoading] = useState(false);
   const [showFullConcordance, setShowFullConcordance] = useState(false);
 
+  const [deepDive, setDeepDive] = useState('');
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+
   const word = strongs.currentWord;
 
   useEffect(() => {
@@ -53,6 +57,8 @@ export function StrongsPanel() {
     setLexLoading(true);
     setShowFullConcordance(false);
     setUsageLimit(20);
+    setDeepDive('');
+    setDeepDiveLoading(false);
     (async () => {
       try {
         const { data } = await supabase
@@ -108,6 +114,51 @@ export function StrongsPanel() {
   const displayTranslit = lexEntry?.transliteration || word.transliteration;
   const displayDef = lexEntry?.definition || word.definition || '';
   const isRealDef = displayDef && displayDef !== 'Click to load definition' && displayDef !== 'Loading…';
+  const isGloss = isRealDef && displayDef.length < 80;
+
+  const runDeepDive = async () => {
+    if (deepDiveLoading) return;
+    setDeepDive('');
+    setDeepDiveLoading(true);
+    const question =
+      `Provide a comprehensive scholarly analysis of Strong's ${word.strongsId} — ` +
+      `the ${langLabel} word "${lexEntry?.word || displayWord}" (${lexEntry?.transliteration || displayTranslit || word.strongsId}). ` +
+      `Cover all of these: 1) Full etymology and root derivation. ` +
+      `2) Complete semantic range — every shade of meaning this word carries across the manuscripts, not just a gloss. ` +
+      `3) Theological significance — what this word reveals about God, His nature, His covenant, or the nature of humanity. ` +
+      `4) Distinguishing it from similar/related terms in the same language (e.g. for Theos, contrast with YHVH, Kyrios, Adonai). ` +
+      `5) Key scriptural examples showing the full range of how it is used, including any surprising or misunderstood usages. ` +
+      `6) Grammatical notes: if a noun, article patterns and case force; if a verb, stem/aspect implications. ` +
+      `Format with headers and bullet points. Give the student real depth — this is a forensic study tool.`;
+    try {
+      const res = await fetch('/api/analyst', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verseRef: `Lexicon: ${word.strongsId}`,
+          verseText: lexEntry?.word || displayWord || '',
+          strongsData: lexEntry ? [{
+            strongsId: word.strongsId,
+            transliteration: lexEntry.transliteration,
+            definition: lexEntry.definition,
+          }] : [],
+          question,
+        }),
+      });
+      if (!res.ok || !res.body) throw new Error('Analyst unavailable');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        setDeepDive(prev => prev + decoder.decode(value));
+      }
+    } catch {
+      setDeepDive('_Analyst unavailable. Check your connection._');
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  };
 
   const mobileMotion = {
     initial: { y: '100%', opacity: 0 },
@@ -241,19 +292,54 @@ export function StrongsPanel() {
                     )}
                   </div>
 
-                  {/* Gloss note: when definition is very short, flag it as a gloss */}
-                  {isRealDef && displayDef.length < 40 && (
+                  {/* Gloss note + no-definition note */}
+                  {(!isRealDef || isGloss) && (
                     <div className="border-t border-slate-700/40 pt-3">
                       <p className="text-[11px] text-amber-500/80 leading-relaxed">
-                        <span className="font-semibold">Note:</span> The above is the Strong&apos;s gloss — the
-                        minimal English equivalent. The original {langLabel} term carries broader theological
-                        weight. Use the concordance below to observe how this word is used in context across
-                        all {lexEntry?.usage_count || 'many'} scriptural occurrences.
+                        {!isRealDef
+                          ? `${word.strongsId} was not found in the local lexicon — it may be a proper name or an entry not yet imported. Use Deep Dive below for a full scholarly analysis.`
+                          : `The above is the Strong's gloss — the minimal English equivalent. The original ${langLabel} carries far more theological weight than a one-word translation. Use Deep Dive below for the full breakdown.`
+                        }
                       </p>
                     </div>
                   )}
                 </div>
               )}
+
+              {/* Deep Dive — AI-powered full scholarly definition */}
+              <div>
+                {!deepDive && (
+                  <button
+                    onClick={runDeepDive}
+                    disabled={deepDiveLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500/15 to-cyan-500/15 border border-indigo-500/30 text-indigo-300 hover:from-indigo-500/25 hover:to-cyan-500/25 hover:text-white transition-all text-sm font-semibold disabled:opacity-50"
+                  >
+                    {deepDiveLoading
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysing…</>
+                      : <><Sparkles className="w-4 h-4" /> Deep Dive — Full Scholarly Analysis</>
+                    }
+                  </button>
+                )}
+                {deepDive && (
+                  <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-500/20 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wider">Forensic Lexicon Analysis</span>
+                    </div>
+                    <div className="text-sm leading-relaxed">
+                      <MarkdownRenderer text={deepDive} />
+                    </div>
+                    {!deepDiveLoading && (
+                      <button
+                        onClick={runDeepDive}
+                        className="mt-2 flex items-center gap-1 text-[11px] text-indigo-500 hover:text-indigo-300 transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" /> Regenerate
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Concordance */}
               <div>
