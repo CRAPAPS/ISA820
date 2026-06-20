@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { PillarHeader } from '@/shared/components/PillarHeader';
 import { MarkdownRenderer } from '@/shared/components/MarkdownRenderer';
+import { RelatedMedia } from '@/shared/components/RelatedMedia';
 import { supabase } from '@/lib/supabase';
 import type { SpiritualUnderstanding } from '@/lib/supabase';
 import {
@@ -120,16 +121,27 @@ function TopicCard({ item }: { item: SpiritualUnderstanding }) {
           </div>
         )}
 
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors font-medium"
-        >
-          {expanded ? (
-            <><ChevronUp className="w-3.5 h-3.5" /> Collapse</>
-          ) : (
-            <><ChevronDown className="w-3.5 h-3.5" /> Read Full Study</>
-          )}
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors font-medium"
+          >
+            {expanded ? (
+              <><ChevronUp className="w-3.5 h-3.5" /> Collapse</>
+            ) : (
+              <><ChevronDown className="w-3.5 h-3.5" /> Read Full Study</>
+            )}
+          </button>
+
+          {/* Reference images — surfaces only when media_assets are tagged with
+              this topic's related_topics or supporting_verses (else renders null). */}
+          <RelatedMedia
+            label={item.title}
+            topics={item.related_topics || []}
+            keywords={[item.title]}
+            verseRefs={item.supporting_verses || []}
+          />
+        </div>
       </div>
 
       <AnimatePresence>

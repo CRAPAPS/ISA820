@@ -7,11 +7,13 @@ import type { MediaAsset } from '@/lib/supabase';
 import { Images, X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 
 interface RelatedMediaProps {
-  book: string;
-  chapter: number;
+  book?: string;
+  chapter?: number;
   verse?: number;
   topics?: string[];
-  keywords?: string[]; // extra search terms e.g. Strong's words / definitions
+  keywords?: string[];   // extra search terms e.g. Strong's words / definitions
+  verseRefs?: string[];  // explicit verse references to match (topic mode)
+  label?: string;        // header label override (topic mode has no book/chapter)
 }
 
 // Only names long/distinct enough to avoid substring collisions
@@ -73,21 +75,25 @@ function idolAssetAllowedInContext(asset: MediaAsset, activeContext: string[]): 
  * RelatedMedia — pops up a lightbox of contextually relevant vault images
  * when reading a verse or topic. Matches against verse_references and topic_tags.
  */
-export function RelatedMedia({ book, chapter, verse, topics = [], keywords = [] }: RelatedMediaProps) {
+export function RelatedMedia({ book, chapter, verse, topics = [], keywords = [], verseRefs = [], label }: RelatedMediaProps) {
   const [assets, setAssets]     = useState<MediaAsset[]>([]);
   const [open, setOpen]         = useState(false);
   const [lightbox, setLightbox] = useState<MediaAsset | null>(null);
   const [imgIdx, setImgIdx]     = useState(0);
 
-  const reference = verse
+  const reference = label
+    ? label
+    : verse
     ? `${book} ${chapter}:${verse}`
-    : `${book} ${chapter}`;
+    : book
+    ? `${book} ${chapter}`
+    : 'Related';
 
   useEffect(() => {
-    if (!book && keywords.length === 0) return;
+    if (!book && topics.length === 0 && keywords.length === 0 && verseRefs.length === 0) return;
 
-    const verseRef = verse ? `${book} ${chapter}:${verse}` : null;
-    const chapterRef = `${book} ${chapter}`;
+    const verseRef = verse && book ? `${book} ${chapter}:${verse}` : null;
+    const chapterRef = book ? `${book} ${chapter}` : '';
 
     // Stopwords: grammatical/functional words and high-frequency non-visual verbs only.
     // Visual content words (light, fire, water, night, star, etc.) are intentionally kept
@@ -126,6 +132,16 @@ export function RelatedMedia({ book, chapter, verse, topics = [], keywords = [] 
         if (data) results.push(...data);
       }
 
+      // 1b. Topic mode: any of the topic's supporting verses (overlap match)
+      if (verseRefs.length > 0) {
+        const { data } = await supabase
+          .from('media_assets')
+          .select('*')
+          .overlaps('verse_references', verseRefs.slice(0, 30))
+          .limit(12);
+        if (data) results.push(...data);
+      }
+
       // 2. Explicit topic tags from the verse's pillar tags
       for (const topic of topics.slice(0, 4)) {
         const { data } = await supabase
@@ -147,7 +163,7 @@ export function RelatedMedia({ book, chapter, verse, topics = [], keywords = [] 
       }
 
       // Active context for idol-gate check
-      const activeContext = [book, chapterRef, verseRef || '', ...topics, ...keywords];
+      const activeContext = [book || '', chapterRef, verseRef || '', ...verseRefs, ...topics, ...keywords];
 
       // Deduplicate, exclude documents, apply idol/false-deity context gate
       const seen = new Set<string>();
@@ -164,7 +180,7 @@ export function RelatedMedia({ book, chapter, verse, topics = [], keywords = [] 
 
       setAssets(unique.slice(0, 12));
     })();
-  }, [book, chapter, verse, topics.join(','), keywords.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [book, chapter, verse, topics.join(','), keywords.join(','), verseRefs.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (assets.length === 0) return null;
 
