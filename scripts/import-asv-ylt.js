@@ -1,7 +1,23 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = 'https://gfswworikmaneujvcnrc.supabase.co';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmc3d3b3Jpa21hbmV1anZjbnJjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTU4MDcxMCwiZXhwIjoyMDkxMTU2NzEwfQ.SojrBXlel2RgnEG4Yxa-77RVWDM6iuzP9AZxTxt5_4w';
+// Credentials come from .env.local, never from source. The service-role/secret key
+// bypasses RLS entirely — hardcoding it put the skeleton key into git history.
+const { readFileSync } = require('fs');
+const { join } = require('path');
+const env = {};
+try {
+  readFileSync(join(__dirname, '..', '.env.local'), 'utf8').split('\n').forEach(line => {
+    const [k, ...v] = line.split('=');
+    if (k && !k.startsWith('#')) env[k.trim()] = v.join('=').trim();
+  });
+} catch { /* ok */ }
+
+const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in .env.local');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 

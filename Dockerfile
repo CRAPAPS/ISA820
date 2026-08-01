@@ -18,9 +18,21 @@ RUN npm ci
 COPY src ./src
 COPY public ./public
 
-# Anon key is public by design (browser-safe, protected by RLS)
-ENV NEXT_PUBLIC_SUPABASE_URL=https://gfswworikmaneujvcnrc.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmc3d3b3Jpa21hbmV1anZjbnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODA3MTAsImV4cCI6MjA5MTE1NjcxMH0.bj5yX1e0kjjNPUtWq1MyAiuIxdD-GO3pkd3vHos93bk
+# Supplied at build time from .env.local via docker-compose build args — NOT
+# hardcoded. The publishable key is browser-safe by design (it ships in the client
+# bundle and can only read, per the RLS lockdown in migration 005), but baking it
+# into the image meant it lived in git history and every rotation required a code
+# change. Now rotation is an .env.local edit and a rebuild.
+#
+# Build with:  docker compose --env-file .env.local build
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Fail loudly rather than shipping an image that silently cannot reach Supabase.
+RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" || (echo "BUILD ARG NEXT_PUBLIC_SUPABASE_URL is empty — did you pass --env-file .env.local?" && exit 1)
+RUN test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || (echo "BUILD ARG NEXT_PUBLIC_SUPABASE_ANON_KEY is empty — did you pass --env-file .env.local?" && exit 1)
 
 RUN npm run build
 
@@ -55,7 +67,11 @@ ENV HOSTNAME="0.0.0.0"
 # the Supabase fetch silently returns [] and every analysis degrades to the
 # "no manuscript rows" branch — the exact failure the grounding layer exists to
 # prevent, and it would look like a model problem rather than a config one.
-ENV NEXT_PUBLIC_SUPABASE_URL=https://gfswworikmaneujvcnrc.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmc3d3b3Jpa21hbmV1anZjbnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODA3MTAsImV4cCI6MjA5MTE1NjcxMH0.bj5yX1e0kjjNPUtWq1MyAiuIxdD-GO3pkd3vHos93bk
+#
+# ARG must be redeclared: build args do not cross stage boundaries.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 CMD ["node", "server.js"]
