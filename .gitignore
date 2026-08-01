@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Vault assets — already uploaded to Supabase Storage
 /ISA_MASTER_VAULT/
+
+# Local agent tooling artifacts — machine-specific, not project state
+/.claude/
+/ruvector.db

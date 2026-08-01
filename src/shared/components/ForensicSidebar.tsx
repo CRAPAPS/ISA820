@@ -122,7 +122,14 @@ export function ForensicSidebar() {
         body: JSON.stringify({
           verseRef: `${verse.book} ${verse.chapter}:${verse.verse}`,
           verseText: verse.text,
-          strongsData: verse.strongs,
+          // Send the reference in parts so the route can query TAHOT/TAGNT
+          // directly. `verse.strongs` is deliberately NOT sent: toUIVerse builds
+          // it for the UI with every definition set to the placeholder string
+          // "Click to load definition", and passing that to the analyst gave it
+          // a list of bare IDs under a header claiming manuscript provenance.
+          book: verse.book,
+          chapter: verse.chapter,
+          verse: verse.verse,
           question: question || undefined,
         }),
       });

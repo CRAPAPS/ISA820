@@ -3,7 +3,7 @@
  * Run: node scripts/parse-tagnt.mjs
  *
  * Reads both TAGNT files from:
- *   SA_MASTER_VAULT/01_Bible_Raw/Greek/Source_Text/
+ *   ISA_MASTER_VAULT/01_Bible_Raw/Greek/Source_Text/
  *
  * TAGNT line format is structurally similar to TAHOT but for Greek.
  * Data line example:
@@ -21,7 +21,7 @@ import { dirname, join } from 'path';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT  = join(__dir, '..');
-const GREEK_DIR = join(ROOT, 'SA_MASTER_VAULT', '01_Bible_Raw', 'Greek', 'Source_Text');
+const GREEK_DIR = join(ROOT, 'ISA_MASTER_VAULT', '01_Bible_Raw', 'Greek', 'Source_Text');
 
 // ── ENV ──────────────────────────────────────────────────────────────────────
 const env = {};
@@ -40,7 +40,7 @@ const supabase = createClient(
 
 // ── BOOK MAP ─────────────────────────────────────────────────────────────────
 const BOOK_ABBR_TO_NAME = {
-  Mat:'Matthew',     Mar:'Mark',           Luk:'Luke',        Jhn:'John',
+  Mat:'Matthew',     Mrk:'Mark',           Luk:'Luke',        Jhn:'John',
   Act:'Acts',        Rom:'Romans',         '1Co':'1 Corinthians','2Co':'2 Corinthians',
   Gal:'Galatians',   Eph:'Ephesians',      Php:'Philippians', Col:'Colossians',
   '1Th':'1 Thessalonians','2Th':'2 Thessalonians',
@@ -53,23 +53,45 @@ const BOOK_ABBR_TO_NAME = {
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 const BATCH = 300;
 
+// `tagnt_words.ref` has NO unique index (unlike tahot_words, where one was added
+// out-of-band), so naming it as a conflict target fails with "no unique or
+// exclusion constraint matching the ON CONFLICT specification" and the batch is
+// rejected wholesale. Only `verses` has a usable natural key here.
+//
+// This script is therefore first-load only. To add rows to an already-populated
+// table, use scripts/backfill-manuscripts.mjs, which skips existing refs.
+const CONFLICT_COLS = {
+  verses: 'book,chapter,verse,translation',
+};
+
 async function batchInsert(table, rows) {
+  const onConflict = CONFLICT_COLS[table] || 'id';
   for (let i = 0; i < rows.length; i += BATCH) {
     const chunk = rows.slice(i, i + BATCH);
-    const { error } = await supabase.from(table).upsert(chunk, { ignoreDuplicates: true });
+    const { error } = await supabase
+      .from(table)
+      .upsert(chunk, { onConflict, ignoreDuplicates: true });
     if (error) console.error(`  [${table}] batch error at ${i}:`, error.message);
   }
 }
 
+/**
+ * Leading chapter.verse is the standard English reference (joins to `verses`);
+ * the optional bracketed pair is the variant versification, present only where
+ * the traditions diverge. Without a branch for the bracketed form those rows
+ * return null and are dropped silently.
+ */
 function parseRef(refRaw) {
-  const m = refRaw.match(/^([^.]+)\.(\d+)\.(\d+)#(\d+)=([A-Z0-9]+)$/);
+  const m = refRaw.match(/^([^.]+)\.(\d+)\.(\d+)(?:\((\d+)\.(\d+)\))?#(\d+)=([A-Z0-9]+)$/);
   if (!m) return null;
   return {
-    book_abbr: m[1],
-    chapter:   parseInt(m[2], 10),
-    verse:     parseInt(m[3], 10),
-    word_num:  parseInt(m[4], 10),
-    text_type: m[5],
+    book_abbr:   m[1],
+    chapter:     parseInt(m[2], 10),
+    verse:       parseInt(m[3], 10),
+    alt_chapter: m[4] ? parseInt(m[4], 10) : null,
+    alt_verse:   m[5] ? parseInt(m[5], 10) : null,
+    word_num:    parseInt(m[6], 10),
+    text_type:   m[7],
   };
 }
 
@@ -106,6 +128,9 @@ function buildVerseText(words) {
 function parseTAGNTFile(filePath) {
   const wordRows = [];
   const verseMap = new Map();
+  // Silently skipping unmapped abbreviations is how the whole Gospel of Mark
+  // (source uses Mrk, the map said Mar) was lost — surface them instead.
+  const unknownAbbrs = new Set();
 
   const lines = readFileSync(filePath, 'utf8').split(/\r?\n/);
 
@@ -125,11 +150,15 @@ function parseTAGNTFile(filePath) {
     const parsed = parseRef(refRaw);
     if (!parsed) continue;
 
-    const { book_abbr, chapter, verse, word_num, text_type } = parsed;
+    const { book_abbr, chapter, verse, alt_chapter, alt_verse, word_num, text_type } = parsed;
     const book_name = BOOK_ABBR_TO_NAME[book_abbr];
-    if (!book_name) continue;
+    if (!book_name) { unknownAbbrs.add(book_abbr); continue; }
 
-    const ref = `${book_abbr}.${chapter}.${verse}#${String(word_num).padStart(2, '0')}`;
+    // Preserve the variant reference inside `ref` — the unique key is the only
+    // field that can carry it without a schema change; chapter/verse stay
+    // standard so the join to `verses` holds.
+    const altPart = alt_chapter !== null ? `(${alt_chapter}.${alt_verse})` : '';
+    const ref = `${book_abbr}.${chapter}.${verse}${altPart}#${String(word_num).padStart(2, '0')}`;
 
     const wordRow = {
       ref,
@@ -179,6 +208,11 @@ function parseTAGNTFile(filePath) {
       pillar_tags:     [],
       translations_jsonb: null,
     });
+  }
+
+  if (unknownAbbrs.size) {
+    console.warn(`  ⚠ UNMAPPED book abbreviations (rows skipped): ${[...unknownAbbrs].join(', ')}`);
+    console.warn('    Add them to BOOK_ABBR_TO_NAME or those books will have no manuscript data.');
   }
 
   return { wordRows, verseRows };

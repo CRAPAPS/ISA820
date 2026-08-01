@@ -58,8 +58,8 @@ const BOOK_ABBR_TO_NAME = {
   Est:'Esther',       Job:'Job',          Psa:'Psalms',       Pro:'Proverbs',
   Ecc:'Ecclesiastes', Sng:'Song of Songs',Isa:'Isaiah',       Jer:'Jeremiah',
   Lam:'Lamentations', Ezk:'Ezekiel',      Dan:'Daniel',       Hos:'Hosea',
-  Joe:'Joel',         Amo:'Amos',         Oba:'Obadiah',      Jon:'Jonah',
-  Mic:'Micah',        Nah:'Nahum',        Hab:'Habakkuk',     Zep:'Zephaniah',
+  Jol:'Joel',         Amo:'Amos',         Oba:'Obadiah',      Jon:'Jonah',
+  Mic:'Micah',        Nam:'Nahum',        Hab:'Habakkuk',     Zep:'Zephaniah',
   Hag:'Haggai',       Zec:'Zechariah',    Mal:'Malachi',
 };
 
@@ -85,18 +85,31 @@ async function batchInsert(table, rows) {
 /**
  * Parse ref string "Gen.1.1#01=L" into components.
  * Returns null if not a valid data line ref.
+ *
+ * Per the TAHOT file header: "Ref: Eng (+Heb)#Heb.words — Bible reference in
+ * English Bibles, as defined by the NRSV (with Heb refs in brackets when they
+ * are different)." The leading chapter.verse is therefore ALWAYS the English
+ * reference — the one that joins to `verses` — and the bracketed pair is the
+ * Hebrew original, present only where the two traditions diverge.
+ *
+ * e.g. Psa.51.0(51.1)#01=L  → English Psa 51:0 (superscription), Hebrew 51:1
+ *      Job.41.1(40.25)#01=L → English Job 41:1,                  Hebrew 40:25
+ *
+ * The old regex had no branch for the bracketed form, so every divergent verse
+ * returned null and was skipped silently — dropping ~21,900 Hebrew word rows,
+ * including the whole of Psalm 51.
  */
 function parseRef(refRaw) {
-  // Format: Book.Chapter.Verse#WordNum=TextType
-  // e.g. Gen.1.1#01=L  or  1Sa.1.1#01=L
-  const m = refRaw.match(/^([^.]+)\.(\d+)\.(\d+)#(\d+)=([A-Z])$/);
+  const m = refRaw.match(/^([^.]+)\.(\d+)\.(\d+)(?:\((\d+)\.(\d+)\))?#(\d+)=([A-Z])$/);
   if (!m) return null;
   return {
-    book_abbr:  m[1],
-    chapter:    parseInt(m[2], 10),
-    verse:      parseInt(m[3], 10),
-    word_num:   parseInt(m[4], 10),
-    text_type:  m[5],
+    book_abbr:   m[1],
+    chapter:     parseInt(m[2], 10),   // English — joins to verses.chapter
+    verse:       parseInt(m[3], 10),   // English — joins to verses.verse
+    heb_chapter: m[4] ? parseInt(m[4], 10) : null,
+    heb_verse:   m[5] ? parseInt(m[5], 10) : null,
+    word_num:    parseInt(m[6], 10),
+    text_type:   m[7],
   };
 }
 
@@ -161,6 +174,9 @@ function parseTAHOTFile(filePath) {
   const wordRows = [];
   // verseMap: "Gen.1.1" → { words: [] }
   const verseMap = new Map();
+  // Any source abbreviation missing from BOOK_ABBR_TO_NAME. Silently skipping
+  // these is how Joel (Jol) and Nahum (Nam) were lost entirely — surface them.
+  const unknownAbbrs = new Set();
 
   const lines = readFileSync(filePath, 'utf8').split(/\r?\n/);
 
@@ -181,11 +197,15 @@ function parseTAHOTFile(filePath) {
     const parsed = parseRef(refRaw);
     if (!parsed) continue;   // not a data line
 
-    const { book_abbr, chapter, verse, word_num, text_type } = parsed;
+    const { book_abbr, chapter, verse, heb_chapter, heb_verse, word_num, text_type } = parsed;
     const book_name = BOOK_ABBR_TO_NAME[book_abbr];
-    if (!book_name) continue;   // unknown book abbr
+    if (!book_name) { unknownAbbrs.add(book_abbr); continue; }
 
-    const ref = `${book_abbr}.${chapter}.${verse}#${String(word_num).padStart(2, '0')}`;
+    // Preserve the Hebrew reference inside `ref` where versification diverges.
+    // `ref` is the unique key and the only field that can carry it without a
+    // schema change; chapter/verse stay English so the join to `verses` holds.
+    const hebPart = heb_chapter !== null ? `(${heb_chapter}.${heb_verse})` : '';
+    const ref = `${book_abbr}.${chapter}.${verse}${hebPart}#${String(word_num).padStart(2, '0')}`;
 
     const wordRow = {
       ref,
@@ -243,6 +263,11 @@ function parseTAHOTFile(filePath) {
       pillar_tags:     [],
       translations_jsonb: null,
     });
+  }
+
+  if (unknownAbbrs.size) {
+    console.warn(`  ⚠ UNMAPPED book abbreviations (rows skipped): ${[...unknownAbbrs].join(', ')}`);
+    console.warn('    Add them to BOOK_ABBR_TO_NAME or those books will have no manuscript data.');
   }
 
   return { wordRows, verseRows };

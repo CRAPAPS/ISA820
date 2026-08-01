@@ -51,6 +51,19 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: 'Missing book or chapter' }, { status: 400 });
   }
 
+  // `chapter` is interpolated straight into an upstream URL path below
+  // (`${bookCode}.${chapter}`, and the bible-api.com path). Unvalidated, a value
+  // like "1/../../something" walks the upstream API's path. The destination host
+  // is hard-coded so this is not full SSRF, but the request shape is still
+  // attacker-controlled. Constrain it to a plausible chapter number.
+  if (!/^\d{1,3}$/.test(chapter) || Number(chapter) < 1 || Number(chapter) > 150) {
+    return Response.json({ error: 'Invalid chapter' }, { status: 400 });
+  }
+  // `book` must be one we know; the allowlist below is the only accepted set.
+  if (!BOOK_TO_API[book]) {
+    return Response.json({ error: 'Unknown book' }, { status: 400 });
+  }
+
   // WEB / ASV / YLT — proxy through server to avoid browser CORS issues
   if (['WEB', 'ASV', 'YLT'].includes(translation)) {
     try {
@@ -106,8 +119,10 @@ export async function GET(req: NextRequest) {
   });
 
   if (!versesRes.ok) {
-    const text = await versesRes.text();
-    return Response.json({ error: `API.Bible error: ${versesRes.status} ${text}` }, { status: versesRes.status });
+    // Log upstream detail server-side; do not relay it. Upstream error bodies
+    // can echo the request URL and key-related messages back to the browser.
+    console.error(`API.Bible error ${versesRes.status} for ${chapterId}:`, await versesRes.text());
+    return Response.json({ error: 'Upstream Bible service unavailable' }, { status: 502 });
   }
 
   const versesData = await versesRes.json() as { data: { id: string; reference: string }[] };
