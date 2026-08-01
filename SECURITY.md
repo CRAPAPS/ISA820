@@ -53,7 +53,28 @@ public anon key only:
 layers are active: the GRANT-level revoke denies the statement outright, with RLS
 behind it.
 
-### SEC-002 · `/admin` has no authentication (UNRESOLVED — needs a decision)
+### SEC-002 · `/admin` has no authentication — RESOLVED 2026-08-02 (Supabase Auth)
+
+Gated by `src/middleware.ts` on `/admin/:path*`. Two checks, both required: a valid
+Supabase session (via `getUser()`, which revalidates against Supabase — never
+`getSession()`, which only decodes a forgeable client cookie), **and** the email
+present in `ADMIN_ALLOWED_EMAILS`. The allowlist **fails closed**: unset or empty
+denies everyone, so a misconfiguration locks the owner out rather than opening the
+door. `/admin/login` is sign-in only, with errors that do not distinguish "no such
+account" from "wrong password".
+
+Verified live: `/admin` → 307 to `/admin/login`; public routes unaffected.
+
+**Operator steps required before `/admin` is reachable at all:** create the account
+in the Supabase dashboard, set `ADMIN_ALLOWED_EMAILS` in the server's `.env.local`,
+and disable public signup in Supabase Auth settings.
+
+Correction to the original finding: `AdminVaultManager` performs **no writes** —
+every Supabase call is a `.select()`, and `handleSync`/`handleUpload` are simulated
+with `setTimeout`. The RLS lockdown broke nothing there, and no service-role write
+path was needed.
+
+<details><summary>Original finding</summary>
 
 `src/app/admin/page.tsx` renders `AdminVaultManager` with no auth check of any
 kind. It is a publicly routable page that creates and deletes `knowledge_base`
@@ -65,6 +86,8 @@ destructive capability but leaves the page readable. That is a mitigation, not a
 **Required:** move admin writes to a server route holding the service-role key
 behind an authentication check, and gate the route in middleware. Do **not**
 restore function by re-granting anon writes.
+
+</details>
 
 ### SEC-003 · Credential rotation recommended
 
