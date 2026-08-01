@@ -47,4 +47,15 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Also required at RUNTIME, not just at build.
+# Next inlines NEXT_PUBLIC_* into the bundles during `npm run build`, which is why
+# the builder stage above sets them. But src/server/manuscript-context.ts reads
+# them server-side inside the route handler, and this runner stage is a fresh
+# image that inherits nothing from the builder. If inlining ever misses that read,
+# the Supabase fetch silently returns [] and every analysis degrades to the
+# "no manuscript rows" branch — the exact failure the grounding layer exists to
+# prevent, and it would look like a model problem rather than a config one.
+ENV NEXT_PUBLIC_SUPABASE_URL=https://gfswworikmaneujvcnrc.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmc3d3b3Jpa21hbmV1anZjbnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODA3MTAsImV4cCI6MjA5MTE1NjcxMH0.bj5yX1e0kjjNPUtWq1MyAiuIxdD-GO3pkd3vHos93bk
+
 CMD ["node", "server.js"]
