@@ -53,6 +53,31 @@ back to a name that didn't match.
 **Check book-name agreement first** whenever a book won't render. It is not
 usually missing data.
 
+### RESOLVED: ASV "Psalm" duplicates (2026-08-02)
+
+`node scripts/audit-psalm-duplicates.mjs [--delete]`
+
+887 ASV rows sat under `"Psalm"` alongside a complete 2,461-verse `"Psalms"`.
+They were NOT simple duplicates — a raw comparison found **0** exact matches,
+because the `"Psalms"` copy carries inline `|strong="H0000"` markup and the
+`"Psalm"` copy is clean prose. Comparing words rather than encoding split them:
+
+- **676 identical** once markup is normalised → **deleted**
+- **211 genuinely different** → **PRESERVED**, deliberately
+
+The 211 are not noise. They differ in ways that matter:
+- the `"Psalm"` copy keeps the ASV's **square-bracket convention marking
+  translator-supplied words** (`thou wilt not require [it]?`); the `"Psalms"`
+  copy dropped the brackets
+- punctuation differs between editions (`heart,` vs `heart:`)
+- ASV 5:12 shows a **parsing defect** in the `"Psalm"` import — Psalm 6's
+  superscription bled onto the end of the previous verse
+
+So neither copy is strictly better: one has the Strong's mapping, the other the
+bracket convention. Both are invisible to the reader (nothing queries `"Psalm"`),
+so there is no urgency. Reconciling them is an editorial decision, not a
+mechanical one — decide which convention should win before touching them.
+
 ### BLOCKED: YLT Nahum
 Two dead ends, both verified 2026-08-02:
 - **getbible.net** (the original importer's source) now 301-redirects *every*
@@ -75,9 +100,7 @@ loudly — `backfill-english-chapters.mjs` exits non-zero on failure for this re
 1. **Mobile layout pass** (not started) — NEXT
 2. Find a YLT source for Nahum (only remaining missing chapter)
 3. Triage the 19 verse-number gaps and the 1 markup-residue row
-4. Decide on 887 ASV rows still under book "Psalm" — ASV already has a complete
-   2,461-verse "Psalms", so these look like duplicates from a partial second
-   import. Deleting production rows needs your call; nothing done yet.
+4. **DONE 2026-08-02** — ASV "Psalm" rows resolved. See below.
 5. TFLSJ ingest — written, dry-run clean, NOT yet run against production:
    `node scripts/ingest-tflsj.mjs` (5,024 entries, median definition 466 chars vs 7 now)
 6. Speaker population — analyse what TAHOT/TAGNT settles on its own *before*
