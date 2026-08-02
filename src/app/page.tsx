@@ -220,9 +220,30 @@ function HomePage() {
                 animate={{ width: isParallelMode ? 320 : 384, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-                className="hidden lg:block border-l border-white/5 flex-shrink-0 overflow-hidden"
+                // In-flow SPACER only. It reserves the column width so the reading
+                // pane is never overlapped; the panel itself is fixed, below.
+                className="hidden lg:block flex-shrink-0"
               >
-                <div className="sticky top-[72px] h-[calc(100vh-72px)] overflow-hidden" style={{ width: isParallelMode ? 320 : 384 }}>
+                {/*
+                  FIXED, not sticky.
+
+                  This was `sticky top-[72px]` inside a wrapper carrying
+                  `overflow-hidden` (needed to clip the width animation). An
+                  ancestor with overflow != visible becomes the sticky element's
+                  scroll container, and since that container never scrolls the
+                  sticky never engages — the panel sat at its static position near
+                  the top of the document. Open the analyst from a verse partway
+                  down a long chapter and it appeared far above the viewport,
+                  invisible until you scrolled back up.
+
+                  Fixed is anchored to the viewport, so the panel is always on
+                  screen whatever the scroll depth, and keeps its own internal
+                  scrolling.
+                */}
+                <div
+                  className="fixed right-0 top-[72px] bottom-0 z-30 border-l border-white/5 overflow-hidden"
+                  style={{ width: isParallelMode ? 320 : 384 }}
+                >
                   <ForensicSidebar />
                 </div>
               </motion.div>

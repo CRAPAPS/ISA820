@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useISA820Store } from '@/store/isa820-store';
 import { supabase } from '@/lib/supabase';
@@ -57,6 +57,8 @@ export function ForensicSidebar() {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showVerseAnalysis, setShowVerseAnalysis] = useState(false);
+  // The panel's internal scroll container — reset to top on each new verse.
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [analystResponse, setAnalystResponse] = useState('');
   const [isAnalystLoading, setIsAnalystLoading] = useState(false);
   const [analystQuestion, setAnalystQuestion] = useState('');
@@ -165,6 +167,11 @@ export function ForensicSidebar() {
       setShowVerseAnalysis(true);
       setAnalystResponse('');
       setAnalystQuestion('');
+      // Reset the panel's own scroll. The analysis renders at the top of this
+      // scroll body, but the position persists from whatever the reader was last
+      // doing here — browsing topic cards leaves it scrolled down, so a fresh
+      // analysis would open above the visible area of an otherwise-visible panel.
+      bodyRef.current?.scrollTo({ top: 0 });
       fetchAnalysis();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -266,7 +273,7 @@ export function ForensicSidebar() {
           </div>
 
           {/* Content Area — single scroll container */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
+          <div ref={bodyRef} className="flex-1 overflow-y-auto scrollbar-hide p-4">
             {/* Verse Analysis View */}
             {showVerseAnalysis && sidebar.selectedVerseForAnalysis && (
               <motion.div
