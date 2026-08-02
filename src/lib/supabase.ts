@@ -119,9 +119,35 @@ export const isSupabaseConfigured = (): boolean => {
   return (
     supabaseUrl.startsWith('https://') &&
     supabaseUrl !== 'https://placeholder.supabase.co' &&
-    supabaseAnonKey.length > 50 // Real keys are JWTs
+    isPlausibleKey(supabaseAnonKey)
   );
 };
+
+/**
+ * Accept BOTH Supabase key generations.
+ *
+ * This guard previously read `supabaseAnonKey.length > 50 // Real keys are JWTs`.
+ * That assumption broke the entire app the moment the project moved off legacy
+ * JWTs: a publishable key is `sb_publishable_…` at ~46 characters, so the check
+ * returned false, `isSupabaseConfigured()` reported "not configured", and every
+ * read through scriptureService returned [] — surfacing as "No verses found …
+ * Data may still be loading from vault" on every chapter of every book.
+ *
+ * It failed silently and app-wide while the analyst kept working, because
+ * server/manuscript-context.ts calls the REST endpoint directly and never
+ * consults this guard. Route checks returning 200 did not catch it either: the
+ * pages are server-rendered shells that fetch their data in the browser.
+ *
+ * Match on shape, not length, and reject only the known placeholder.
+ */
+function isPlausibleKey(key: string): boolean {
+  if (!key || key === 'placeholder-anon-key') return false;
+  // New-style publishable / secret keys.
+  if (key.startsWith('sb_publishable_') || key.startsWith('sb_secret_')) return key.length > 20;
+  // Legacy JWTs — three dot-separated segments.
+  if (key.startsWith('eyJ')) return key.split('.').length === 3;
+  return false;
+}
 
 // Project reference for display
 export const supabaseProjectRef = supabaseUrl.split('.supabase.co')[0].replace('https://', '');
