@@ -121,7 +121,12 @@ function HomePage() {
         <main className="flex-1 flex overflow-x-hidden">
           {/* Bible Reader Area */}
           <div
-            className={`flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden transition-all ${
+            // NO overflow-y here. The page body is the scroller; adding
+            // overflow-y-auto made this a second scroll container nested inside
+            // it, so narrow screens showed two scrollbars and the verse list
+            // scrolled independently of the page. overflow-x-hidden stays — it
+            // clips wide content without creating a vertical scroll context.
+            className={`flex-1 p-4 lg:p-6 overflow-x-hidden transition-all ${
               isParallelMode ? 'max-w-6xl' : 'max-w-4xl'
             } mx-auto w-full`}
           >
