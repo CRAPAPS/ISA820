@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useISA820Store } from '@/store/isa820-store';
 import { scriptureService } from '@/server/services';
 import { supabase } from '@/lib/supabase';
+import { resolveStrongs, resolveStrongsBatch } from '@/lib/strongs';
 import type { Verse as DBVerse } from '@/lib/supabase';
 import type { Verse as UIVerse, PillarType, VoiceSpeaker } from '@/types';
 import { Tooltip } from './Tooltip';
@@ -139,14 +140,19 @@ function InlineStrongsWord({ text, strongsId }: { text: string; strongsId: strin
     if (fetching) return;
     setFetching(true);
     try {
-      const { data } = await supabase
-        .from('strongs_lexicon').select('*').eq('strongs_id', strongsId).single();
+      // Was `.eq('strongs_id', strongsId).single()`. The reader holds ids like
+      // "G32"/"G746" while the lexicon stores "G0032G"/"G0746", so this missed on
+      // roughly a quarter of words and the panel opened with no definition.
+      const data = await resolveStrongs(strongsId);
       openStrongsPanel(data ? {
         word: data.word || strongsId,
-        strongsId: data.strongs_id,
+        // Keep the ORIGINAL id: the panel re-queries usage/concordance with it,
+        // and the resolver may return a merged multi-sense label rather than a
+        // single stored id.
+        strongsId,
         transliteration: data.transliteration || '',
         definition: data.definition || '',
-        usageCount: data.usage_count || 0,
+        usageCount: 0,
         position: { start: 0, end: 0 },
       } : {
         word: strongsId, strongsId,
@@ -186,18 +192,23 @@ function InterlinearRow({ strongsIds }: { strongsIds: string[] }) {
 
   useEffect(() => {
     if (strongsIds.length === 0) return;
-    supabase
-      .from('strongs_lexicon')
-      .select('strongs_id,word,transliteration,definition')
-      .in('strongs_id', strongsIds)
-      .then(({ data }) => {
-        if (!data) return;
-        const map: Record<string, LexEntry> = {};
-        data.forEach(e => {
-          map[e.strongs_id] = { word: e.word || '', transliteration: e.transliteration || '', definition: e.definition || '' };
-        });
-        setEntries(map);
-      });
+    // Was `.in('strongs_id', strongsIds)` keyed by the LEXICON's strongs_id,
+    // which broke twice over: the raw ids ("G32", "G746") rarely match the stored
+    // format ("G0032G", "G0746"), and even on a hit the map was keyed by the
+    // stored id while this component looks entries up by the original reference —
+    // so a successful match still rendered nothing.
+    // resolveStrongsBatch keys by the ORIGINAL id, so lookups below just work.
+    resolveStrongsBatch(strongsIds).then(resolved => {
+      const map: Record<string, LexEntry> = {};
+      for (const [id, e] of Object.entries(resolved)) {
+        map[id] = {
+          word: e.word || '',
+          transliteration: e.transliteration || '',
+          definition: e.definition || '',
+        };
+      }
+      setEntries(map);
+    });
   }, [strongsIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = (sid: string, e: React.MouseEvent) => {

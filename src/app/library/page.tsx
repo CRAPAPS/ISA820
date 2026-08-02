@@ -122,9 +122,16 @@ export default function LibraryPage() {
 
       const numMatch = q.match(/^[hgHG]?(\d+)$/);
       if (numMatch) {
+        // Searching "G32" used to run ilike '%G32%', which cannot match the
+        // stored "G0032G" — the substring "G32" simply is not in it. The lexicon
+        // pads to four digits and appends a disambiguation suffix, so normalise
+        // the query the same way and match the whole family by prefix.
         const prefix = /^h/i.test(q) ? 'H' : /^g/i.test(q) ? 'G' : '';
-        const id = prefix ? `${prefix}${numMatch[1]}` : numMatch[1];
-        query = query.ilike('strongs_id', `%${id}%`);
+        const padded = numMatch[1].padStart(4, '0');
+        query = prefix
+          ? query.ilike('strongs_id', `${prefix}${padded}%`)
+          // No H/G given: match either language's family, e.g. "32" -> H0032*/G0032*
+          : query.or(`strongs_id.ilike.H${padded}%,strongs_id.ilike.G${padded}%`);
       } else {
         query = query.or(
           `word.ilike.%${q}%,transliteration.ilike.%${q}%,definition.ilike.%${q}%`

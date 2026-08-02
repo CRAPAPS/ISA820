@@ -33,9 +33,17 @@ sense, merging multiple senses rather than picking one arbitrarily. Verified:
 `G32`→`G0032G` ἄγγελος, `G746`→`G0746` ἀρχή, `H559`→`H0559` אָמַר.
 Wired into `StrongsPanel`.
 
-**Still to wire onto the resolver:** `BibleReader.tsx` inline word lookup (~line
-107) and interlinear batch (~line 155), and `src/app/library/page.tsx:115`. They
-still query `strongs_lexicon` directly and so still miss ~26% of ids.
+**All call sites now wired** (2026-08-02):
+- `StrongsPanel` — `resolveStrongs`
+- `BibleReader` inline word click — `resolveStrongs`
+- `BibleReader` interlinear row — `resolveStrongsBatch`. This one had a *second*
+  bug: the map was keyed by the lexicon's `strongs_id` while the component looked
+  entries up by the original reference, so even a successful match rendered
+  nothing. The batch helper keys by the original id.
+- `library/page.tsx` search — different symptom, same root cause. A numeric query
+  ran `ilike '%G32%'`, which cannot match the stored `G0032G` because that
+  substring is not present. Now pads and matches the family by prefix
+  (`G0032%`), or both languages when no H/G is given. Query forms verified live.
 
 **The residual 8.5% is a real data gap, not a bug.** `G2258` is a KJV-era number
 absent from an *extended* Strong's lexicon (which uses `G1510` for that form).
