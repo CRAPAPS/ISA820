@@ -804,7 +804,11 @@ function NavBar({
     : bookIdx < BOOK_ORDER.length - 1 ? BOOK_ORDER[bookIdx + 1] : '';
 
   return (
-    <div className="glass-card overflow-hidden">
+    // Sticky within the reading pane, so the book/chapter/verse controls stay
+    // reachable while the chapter scrolls beneath them. Previously this row
+    // scrolled away with the verses, leaving no navigation once you were a
+    // screen or two into a long chapter.
+    <div className="glass-card overflow-hidden sticky top-0 z-20">
       {/* Primary row — verse prev / reference / verse next */}
       <div className="flex items-stretch">
         {/* Prev verse */}

@@ -75,7 +75,14 @@ function HomePage() {
       {/* Aurora background */}
       <div className="aurora-bg" aria-hidden="true" />
 
-      <div className="relative z-10 flex flex-col min-h-screen">
+      {/*
+        Viewport-locked shell: h-screen + overflow-hidden so the PAGE never
+        scrolls. The header and footer stay pinned and only the reading pane
+        scrolls — the same structure /read/[book]/[chapter] already uses.
+        Previously this was min-h-screen, so the whole document scrolled and the
+        navigation drifted off the top with the verses.
+      */}
+      <div className="relative z-10 flex flex-col h-screen overflow-hidden">
         <PillarHeader />
 
         {/* LEFT FAB — orange Topics / sidebar toggle, always visible on mobile */}
@@ -118,15 +125,15 @@ function HomePage() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 flex overflow-x-hidden">
+        {/* min-h-0 is required: a flex child defaults to min-height:auto, which
+            refuses to shrink below its content and would defeat the overflow. */}
+        <main className="flex-1 flex min-h-0 overflow-hidden">
           {/* Bible Reader Area */}
           <div
-            // NO overflow-y here. The page body is the scroller; adding
-            // overflow-y-auto made this a second scroll container nested inside
-            // it, so narrow screens showed two scrollbars and the verse list
-            // scrolled independently of the page. overflow-x-hidden stays — it
-            // clips wide content without creating a vertical scroll context.
-            className={`flex-1 p-4 lg:p-6 overflow-x-hidden transition-all ${
+            // THE scroll container — now the only one on the page. The shell
+            // above is height-locked and overflow-hidden, so this pane owns
+            // vertical scrolling and the header/footer stay put.
+            className={`flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden transition-all ${
               isParallelMode ? 'max-w-6xl' : 'max-w-4xl'
             } mx-auto w-full`}
           >
