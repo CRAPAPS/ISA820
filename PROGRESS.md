@@ -6,7 +6,18 @@
 
 ## IN FLIGHT
 
-Nothing running. The `parse-tahot.mjs` re-run completed.
+Nothing running. All work through commit `51ad37d` is **pushed and deployed**.
+
+Verified live 2026-08-02: `/read/Psalms/1`, `/read/Song of Solomon/1`,
+`/read/Nahum/1`, `/read/Mark/1`, `/read/Revelation/1` all 200; `/admin` 307
+(gated); container healthy; analyst returned `TAHOT 4 word rows` for
+Song of Solomon 1:1 — a book that was ungroundable before the rename.
+
+**Deploy gotcha:** `git push` hangs indefinitely because `credential.helper=manager`
+(Git Credential Manager) opens a GUI dialog that cannot be answered from a
+non-interactive shell. `GIT_TERMINAL_PROMPT=0` does NOT suppress it — that covers
+terminal prompts only. Use `GCM_INTERACTIVE=never` to fail fast and see the real
+error, then re-authenticate GCM interactively.
 
 ---
 
