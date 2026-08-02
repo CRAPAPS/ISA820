@@ -133,11 +133,33 @@ for (let from = 0; ; from += 1000) {
 }
 console.log(`  ${existing.size.toLocaleString()} Greek entries in strongs_lexicon.`);
 
+// The lexicon stores DISAMBIGUATED ids ("G0032G") while TFLSJ is grouped here by
+// BASE ("G0032"). Matching base-to-base skipped every suffixed entry — which is
+// most of the interesting ones, G0032G ἄγγελος among them — and quietly filed
+// them as "unmatched" while still reporting thousands of successful updates.
+//
+// Build a base -> [actual lexicon ids] index and write the composed definition to
+// every sense of that base. composeDefinition() has already merged TFLSJ's own
+// per-sense text, so each sense receives the full entry rather than a fragment
+// chosen at random.
+const lexByBase = new Map();
+for (const id of existing) {
+  const m = id.match(/^([HGA])(\d+)/);
+  if (!m) continue;
+  const base = m[1] + m[2].padStart(4, '0');
+  if (!lexByBase.has(base)) lexByBase.set(base, []);
+  lexByBase.get(base).push(id);
+}
+
 const updates = [];
 const unmatched = [];
 for (const [strongsId, entry] of byStrongs) {
-  if (!existing.has(strongsId)) { unmatched.push(strongsId); continue; }
-  updates.push({ strongsId, definition: composeDefinition(entry) });
+  const definition = composeDefinition(entry);
+  const targets = existing.has(strongsId)
+    ? [strongsId]                       // lexicon holds the plain base number
+    : (lexByBase.get(strongsId) || []); // otherwise, its disambiguated senses
+  if (!targets.length) { unmatched.push(strongsId); continue; }
+  for (const t of targets) updates.push({ strongsId: t, definition });
 }
 
 console.log(`  Will update : ${updates.length.toLocaleString()}`);
