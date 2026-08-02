@@ -4,6 +4,47 @@
 
 ---
 
+## Strong's / lexicon integrity — audited 2026-08-02
+
+`node scripts/audit-strongs-resolution.mjs [--verbose]` (read-only)
+
+**26.8% of all Strong's lookups returned no definition.** G32 (ἄγγελος) in
+Revelation 2:1 was one instance of a systemic mismatch — four ID formats coexist
+and no call site reconciled them:
+
+| Source | Format |
+|---|---|
+| `verses.strongs_numbers` / `word_strongs` (KJV) | `G746` unpadded, no suffix |
+| `verses.strongs_numbers` (TBESG/TAHOT) | `G0746` padded, no suffix |
+| `tahot_words.root_d_strong` | `H5921A` padded + suffix |
+| `strongs_lexicon.strongs_id` | `G0032G` padded + **suffix** |
+
+Across all 19,880 distinct referenced ids:
+
+| Outcome | Count | Share |
+|---|---|---|
+| exact match | 14,544 | 73.2% |
+| needs zero-padding (`H559`→`H0559`) | 1,307 | 6.6% |
+| needs disambiguated sense (`G0032`→`G0032G`) | 2,349 | 11.8% |
+| **unresolvable** | 1,680 | 8.5% |
+
+**Fixed:** `src/lib/strongs.ts` resolves exact → zero-padded → disambiguated
+sense, merging multiple senses rather than picking one arbitrarily. Verified:
+`G32`→`G0032G` ἄγγελος, `G746`→`G0746` ἀρχή, `H559`→`H0559` אָמַר.
+Wired into `StrongsPanel`.
+
+**Still to wire onto the resolver:** `BibleReader.tsx` inline word lookup (~line
+107) and interlinear batch (~line 155), and `src/app/library/page.tsx:115`. They
+still query `strongs_lexicon` directly and so still miss ~26% of ids.
+
+**The residual 8.5% is a real data gap, not a bug.** `G2258` is a KJV-era number
+absent from an *extended* Strong's lexicon (which uses `G1510` for that form).
+Hebrew proper and divine names (`H6726` Zion, `H3290` Jacob, `H0136` Adonai) are
+also missing — `proper_names` keys Jacob as the Greek `G2384G`, so they cannot be
+reached by their Hebrew number. Closing this needs a data source, not code.
+
+---
+
 ## ⚠ UNPUSHED WORK — do this first
 
 Commit **`e140a9b`** ("Pin header, footer and reader nav; scroll only the chapter
