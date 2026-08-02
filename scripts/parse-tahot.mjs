@@ -56,7 +56,12 @@ const BOOK_ABBR_TO_NAME = {
   '1Sa':'1 Samuel',   '2Sa':'2 Samuel',   '1Ki':'1 Kings',    '2Ki':'2 Kings',
   '1Ch':'1 Chronicles','2Ch':'2 Chronicles',Ezr:'Ezra',       Neh:'Nehemiah',
   Est:'Esther',       Job:'Job',          Psa:'Psalms',       Pro:'Proverbs',
-  Ecc:'Ecclesiastes', Sng:'Song of Songs',Isa:'Isaiah',       Jer:'Jeremiah',
+  // 'Song of Solomon', NOT 'Song of Songs'. These names are a join key: the
+  // reader's BOOK_CHAPTERS map and manuscript-context.ts both look books up by
+  // this exact string. The mismatch hid all 8 chapters from the reader AND made
+  // the book ungroundable for the analyst, because tahot_words.book_name never
+  // matched either. Fourth instance of this class after Mrk/Jol/Nam and Psalm.
+  Ecc:'Ecclesiastes', Sng:'Song of Solomon',Isa:'Isaiah',      Jer:'Jeremiah',
   Lam:'Lamentations', Ezk:'Ezekiel',      Dan:'Daniel',       Hos:'Hosea',
   Jol:'Joel',         Amo:'Amos',         Oba:'Obadiah',      Jon:'Jonah',
   Mic:'Micah',        Nam:'Nahum',        Hab:'Habakkuk',     Zep:'Zephaniah',

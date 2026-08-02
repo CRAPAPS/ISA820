@@ -4,14 +4,9 @@
 
 ---
 
-## IN FLIGHT — verify before starting anything
+## IN FLIGHT
 
-| Item | State | How to check |
-|---|---|---|
-| `parse-tahot.mjs` re-run | **RUNNING** — TAHOT verses 21,088 → 21,333 and climbing | `node scripts/audit-bible-render.mjs`; TAHOT missing chapters must reach 0 |
-
-If the process died with its session, re-run `node scripts/parse-tahot.mjs`.
-It is idempotent (upserts on `book,chapter,verse,translation`).
+Nothing running. The `parse-tahot.mjs` re-run completed.
 
 ---
 
@@ -19,26 +14,33 @@ It is idempotent (upserts on `book,chapter,verse,translation`).
 
 Run: `node scripts/audit-bible-render.mjs`
 
-Baseline at 2026-08-02 (185,288 rows): **103 missing chapters**.
+**103 missing chapters → 1.** Only YLT Nahum remains, and it is source-blocked.
 
-| Translation | Missing | Status |
+| Translation | Status |
+|---|---|
+| KJV, ASV, WEB, BSB, TBESG | **0 missing** |
+| TAHOT | **0 missing** (was 99) |
+| YLT | Nahum 1–3 — **BLOCKED**, no source |
+
+Remaining minor: 1 markup-residue row (TBESG 2 Peter 2:11, likely a detector
+false positive) and 19 chapters with verse-number gaps — some legitimate, since
+critical texts omit verses the KJV numbers. Neither triaged.
+
+### What was actually wrong — four instances of ONE bug class
+
+Book names are a **join key**: the reader's `BOOK_CHAPTERS` map, `verses.book`
+and `tahot_words.book_name` must all agree on the exact string. Every gap traced
+back to a name that didn't match.
+
+| Symptom | Cause | Fix |
 |---|---|---|
-| TAHOT | 99 chapters | re-run in flight — words existed, `verses` rows never generated |
-| BSB | Psalms, all 150 | **BLOCKED** — see below |
-| ASV | Nahum 1–3 | **FIXED** 2026-08-02, 47 verses |
-| WEB | Nahum 1–3 | **FIXED** 2026-08-02, 47 verses |
-| YLT | Nahum 1–3 | **BLOCKED** — no source, see below |
-| KJV | none | clean |
-| TBESG | none | 1 markup-residue row (2 Peter 2:11), likely a detector false positive |
+| Mark, Joel, Nahum absent from manuscripts | parser maps said `Mar`/`Joe`/`Nah`; sources say `Mrk`/`Jol`/`Nam` | map corrected + backfill |
+| BSB Psalms, all 150 chapters | Berean workbook says **"Psalm"**, app says **"Psalms"** — 2,461 rows were present all along, just unreachable | renamed in `verses` |
+| TAHOT Song of Solomon, all 8 | parser said **"Song of Songs"**, app says **"Song of Solomon"** — also made the book **ungroundable for the analyst**, since `tahot_words.book_name` never matched | renamed in BOTH tables + parser map fixed |
+| TAHOT 99 chapters | `backfill-manuscripts.mjs` wrote word rows but never regenerated `verses` | re-ran `parse-tahot.mjs` |
 
-Also 20 chapters with verse-number gaps — some legitimate, since critical texts
-omit verses the KJV numbers. Not yet triaged.
-
-### BLOCKED: BSB Psalms
-`scripts/import-bsb.js` does `require('xlsx')` and **`xlsx` is not in package.json**,
-so the script cannot run at all. Install it, then determine whether Psalms is
-absent from `ISA_MASTER_VAULT/01_Bible_Raw/English_Versions/Berean Bible.xlsx`
-or was lost during a partial import, before re-importing.
+**Check book-name agreement first** whenever a book won't render. It is not
+usually missing data.
 
 ### BLOCKED: YLT Nahum
 Two dead ends, both verified 2026-08-02:
@@ -59,14 +61,15 @@ loudly — `backfill-english-chapters.mjs` exits non-zero on failure for this re
 
 ## Next, in order
 
-1. Confirm the TAHOT re-run landed (audit → TAHOT 0 missing)
-2. `npm i xlsx`, inspect the Berean workbook, re-import BSB Psalms
-3. Find a YLT source for Nahum
-4. Re-run audit — target 0 missing chapters
-5. **Mobile layout pass** (not started)
-6. TFLSJ ingest — written, dry-run clean, NOT yet run against production:
+1. **Mobile layout pass** (not started) — NEXT
+2. Find a YLT source for Nahum (only remaining missing chapter)
+3. Triage the 19 verse-number gaps and the 1 markup-residue row
+4. Decide on 887 ASV rows still under book "Psalm" — ASV already has a complete
+   2,461-verse "Psalms", so these look like duplicates from a partial second
+   import. Deleting production rows needs your call; nothing done yet.
+5. TFLSJ ingest — written, dry-run clean, NOT yet run against production:
    `node scripts/ingest-tflsj.mjs` (5,024 entries, median definition 466 chars vs 7 now)
-7. Speaker population — analyse what TAHOT/TAGNT settles on its own *before*
+6. Speaker population — analyse what TAHOT/TAGNT settles on its own *before*
    writing guidance documents, so documents cover only real ambiguities
 
 ---
