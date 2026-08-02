@@ -4,6 +4,49 @@
 
 ---
 
+## ⚠ UNPUSHED WORK — do this first
+
+Commit **`e140a9b`** ("Pin header, footer and reader nav; scroll only the chapter
+content") is committed **locally only**. Remote and server are at `c2e75c5`.
+
+`git push` is hanging because Git Credential Manager needs interactive
+re-authentication and opens a GUI dialog no headless shell can answer. Run
+`git push` from a normal terminal, complete the GCM prompt, then deploy.
+
+Diagnostic: `GCM_INTERACTIVE=never git push` fails in ~2s with the real error
+instead of hanging forever.
+
+---
+
+## Mobile / layout pass — state
+
+**Deployed (`c2e75c5`):**
+- Analyst panel is now `fixed right-0 top-[72px] bottom-0` instead of `sticky`.
+  It was `sticky top-[72px]` inside a wrapper with `overflow-hidden`; an ancestor
+  with overflow != visible becomes the sticky scroll container, and since that
+  never scrolls, sticky never engaged — the panel sat near the top of the
+  document and was invisible when you opened it from a verse deep in a chapter.
+- Sidebar resets its internal scroll to top on each new verse (the analysis
+  renders at the top of that scroll body, but the position persisted from
+  browsing topic cards).
+- Removed the nested `overflow-y-auto` on the reader column that produced two
+  scrollbars on narrow screens.
+
+**Committed, NOT yet deployed (`e140a9b`):**
+- Shell is `h-screen overflow-hidden`, so the page itself never scrolls;
+  header and footer stay pinned.
+- `main` gets `min-h-0` — a flex child defaults to `min-height:auto` and refuses
+  to shrink below its content, which defeats the overflow without it.
+- Reading pane is the single scroll container.
+- Reader NavBar is `sticky top-0 z-20` within that pane.
+
+**Known, not yet addressed:** `PillarHeader` uses `flex-wrap sm:flex-nowrap`, so
+below 640px it wraps to two rows and exceeds the hardcoded `72px` that
+`top-[72px]` / `h-[calc(100vh-72px)]` assume in both page layouts. Awaiting the
+user's mobile screenshot before changing header geometry.
+
+---
+
 ## IN FLIGHT
 
 Nothing running. All work through commit `51ad37d` is **pushed and deployed**.
