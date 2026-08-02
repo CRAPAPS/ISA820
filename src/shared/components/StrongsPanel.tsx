@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useISA820Store } from '@/store/isa820-store';
 import { supabase } from '@/lib/supabase';
+import { resolveStrongs } from '@/lib/strongs';
 import { X, BookOpen, Hash, ExternalLink, Loader2, ChevronDown, Sparkles } from 'lucide-react';
 import { RelatedMedia } from './RelatedMedia';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -61,19 +62,20 @@ export function StrongsPanel() {
     setDeepDiveLoading(false);
     (async () => {
       try {
-        const { data } = await supabase
-          .from('strongs_lexicon')
-          .select('*')
-          .eq('strongs_id', word.strongsId)
-          .single();
+        // Was `.eq('strongs_id', word.strongsId).single()` — an exact match against
+        // a column whose format the caller does not share. The reader passes
+        // "G32"/"G746" while the lexicon stores "G0032G"/"G0746", so 26.8% of
+        // clicks returned nothing and the panel showed no definition at all.
+        // resolveStrongs() reconciles the formats — see lib/strongs.ts.
+        const data = await resolveStrongs(word.strongsId);
         if (data) {
           setLexEntry({
             word: data.word || word.strongsId,
             transliteration: data.transliteration || '',
             definition: data.definition || 'No definition available',
             part_of_speech: data.part_of_speech || '',
-            pronunciation_guide: data.pronunciation_guide || '',
-            usage_count: data.usage_count || 0,
+            pronunciation_guide: '',
+            usage_count: 0,
           });
         } else {
           setLexEntry(null);
