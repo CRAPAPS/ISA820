@@ -71,6 +71,42 @@ function getEffectiveTranslation(book: string, userTranslation: string): string 
   return userTranslation;
 }
 
+// ── Inline Strong's markup (WEB / ASV) ───────────────────────────────────────
+// Those two imports stored word-level Strong's inside the verse text itself:
+//   In|strong="G1722" the|strong="G1722" beginning was|strong="G1510" ...
+// ~62,000 rows (WEB 30,849 · ASV 30,931). Nothing parsed it, so the reader
+// printed the raw markup — every word trailed by its tag, the sentence
+// unreadable — and it showed even with the Strong's overlay switched OFF.
+//
+// The markup is NOT stripped at ingest because it is the only word-level Strong's
+// mapping these translations have; parsing it here gives WEB/ASV the same
+// clickable superscripts KJV gets from `word_strongs`.
+const HAS_STRONGS_MARKUP = '|strong=';
+
+/** Split marked-up text into the same {t, s} token shape as `word_strongs`. */
+function parseInlineStrongsMarkup(text: string): Array<{ t: string; s?: string }> | null {
+  if (!text.includes(HAS_STRONGS_MARKUP)) return null;
+  return text.trim().split(/\s+/).map(tok => {
+    const m = tok.match(/^(.*?)\|strong="([^"]+)"$/);
+    return m && m[1] ? { t: m[1], s: m[2] } : { t: tok.replace(/\|strong="[^"]*"/g, '') };
+  }).filter(tok => tok.t.length > 0);
+}
+
+/**
+ * Readable text with the tags removed — used whenever the overlay is off.
+ * The source spaces punctuation as its own token ("God , and"), so close those
+ * gaps rather than reproducing the importer's spacing.
+ */
+function stripStrongsMarkup(text: string): string {
+  if (!text.includes(HAS_STRONGS_MARKUP)) return text;
+  return text
+    .replace(/\|strong="[^"]*"/g, '')
+    .replace(/\s+([,.;:!?'")\]])/g, '$1')
+    .replace(/([([“])\s+/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function toUIVerse(v: DBVerse): UIVerse {
   return {
@@ -232,9 +268,19 @@ function VerseCard({
   const isAnalysed = sidebar.selectedVerseForAnalysis?.id === verse.id;
   const pillars = verse.pillar_tags || [];
   const strongs = verse.strongs_numbers || [];
-  const textTokens = verse.text.trim().split(/\s+/);
+  // WEB/ASV carry their Strong's inline in `text`; everything else is unaffected
+  // (both helpers return early when the marker is absent).
+  const inlineMarkupTokens = parseInlineStrongsMarkup(verse.text);
+  const plainText = stripStrongsMarkup(verse.text);
+  const textTokens = plainText.trim().split(/\s+/);
   const canInlineTAHOT = !verse.word_strongs && strongs.length > 0 && textTokens.length === strongs.length;
-  const hasStrongsData = (verse.word_strongs != null && verse.word_strongs.some(t => t.s)) || strongs.length > 0;
+  // WEB/ASV have no `strongs_numbers` and no `word_strongs` — their tags live in
+  // the text. Without counting those, the Strong's toggle never appeared for the
+  // two translations that actually carry per-word data.
+  const hasStrongsData =
+    (verse.word_strongs != null && verse.word_strongs.some(t => t.s)) ||
+    strongs.length > 0 ||
+    (inlineMarkupTokens?.some(t => t.s) ?? false);
 
   // Extract content words for image search — 4+ chars, has a Strong's ID (excludes
   // particles/conjunctions that have no visual meaning), deduplicated.
@@ -355,9 +401,22 @@ function VerseCard({
               tok.s ? <InlineStrongsWord key={i} text={tok.t} strongsId={tok.s} />
                     : <span key={i}>{tok.t}</span>
             )
-          : showStrongs && canInlineTAHOT
-            ? textTokens.map((tok, i) => <InlineStrongsWord key={i} text={tok} strongsId={strongs[i]} />)
-            : verse.text
+          : showStrongs && inlineMarkupTokens
+            // WEB/ASV: tags parsed out of the text. Unlike `word_strongs`, whose
+            // tokens carry their own leading spaces, these come from a whitespace
+            // split — so re-insert the separator or the verse runs together.
+            ? inlineMarkupTokens.map((tok, i) => (
+                <span key={i}>
+                  {i > 0 && !/^[,.;:!?'")\]]/.test(tok.t) && ' '}
+                  {tok.s
+                    ? <InlineStrongsWord text={tok.t} strongsId={tok.s} />
+                    : tok.t}
+                </span>
+              ))
+            : showStrongs && canInlineTAHOT
+              ? textTokens.map((tok, i) => <InlineStrongsWord key={i} text={tok} strongsId={strongs[i]} />)
+              // Always the cleaned string — raw markup must never reach the page.
+              : plainText
         }
       </p>
 
