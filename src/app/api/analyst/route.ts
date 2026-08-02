@@ -210,12 +210,31 @@ export async function POST(req: Request) {
     ? { book: body.book, chapter: body.chapter, verse: body.verse }
     : parseVerseRef(verseRef);
 
+  // A lexicon study has no verse by definition — StrongsPanel sends
+  // "Lexicon: G0032H". Demanding manuscript rows for it produced a refusal to
+  // analyse, plus a nonsensical Voice Signature for a dictionary entry. Treat it
+  // as its own mode rather than as a verse analysis that failed.
+  const isLexiconStudy = /^Lexicon:/i.test(verseRef) && !loc;
+
   const manuscript = loc
     ? await fetchManuscriptContext(loc.book, loc.chapter, loc.verse)
     : null;
 
   let manuscriptSection: string;
-  if (manuscript?.grounded && manuscript.block) {
+  if (isLexiconStudy) {
+    manuscriptSection =
+      '\n\n---\n## LEXICAL STUDY — no single verse in view\n\n' +
+      'This request concerns a WORD, not a passage, so there is no verse-level ' +
+      'manuscript block and none is expected. Do NOT report missing manuscript ' +
+      'evidence, and do NOT produce a Voice Signature — nothing is speaking here.\n\n' +
+      'Structure the reply as a lexical entry instead: etymology and root, full ' +
+      'semantic range across the manuscripts, theological significance measured ' +
+      'against the six pillars, contrast with near-synonyms, grammatical notes, ' +
+      'and key occurrences with references. Where the supplied lexicon text is ' +
+      'only a short gloss, say so plainly and give the fuller picture from the ' +
+      'manuscript tradition, marking clearly which parts go beyond the supplied ' +
+      'entry.';
+  } else if (manuscript?.grounded && manuscript.block) {
     manuscriptSection = `\n\n---\n${manuscript.block}`;
   } else {
     // Never omit this silently. An absent block reads as "no constraint" and the
