@@ -1,6 +1,64 @@
 # ISA820 — Live Progress
 
-**Updated: 2026-08-02.** Quick-resume state. Read this first.
+**Updated: 2026-08-08.** Quick-resume state. Read this first.
+
+---
+
+## OUTAGE 2026-08-08 — TLS certificate expired — RESOLVED
+
+Site was unreachable in the browser: *"the website sent back unusual and
+incorrect credentials"*, with HSTS preventing click-through.
+
+**The app was never down.** Container healthy, nginx up, Supabase fine. Only TLS
+was broken.
+
+**Root cause:** the Let's Encrypt cert expired `Aug 8 07:53:11 2026 GMT`.
+`/etc/letsencrypt/renewal/isa820.com.conf` had `authenticator = standalone`,
+which makes certbot bind port 80 itself — but nginx holds `0.0.0.0:80`. So every
+renewal since ~July 9 (the 30-day window on a May 10 cert) died with:
+
+```
+Could not bind TCP port 80 ... [Errno 98] Address already in use
+```
+
+`certbot.timer` was enabled and firing on schedule the whole time. It failed
+silently for a month — **a green timer is not a green renewal.**
+
+**Second latent bug, fixed at the same time:** the renewal config had no
+`renew_hook`/`deploy_hook`. Even a successful renewal would have written new
+files to disk while nginx kept serving the old cert from memory — the identical
+browser symptom, with a perfectly valid cert sitting on disk.
+
+**Permanent fix — persisted directory hooks (no nginx config edits):**
+
+| File | Contents |
+|---|---|
+| `/etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh` | `systemctl stop nginx` |
+| `/etc/letsencrypt/renewal-hooks/post/start-nginx.sh` | `systemctl start nginx` |
+
+Both `chmod +x`. These run automatically on every `certbot renew`, so they fix
+the port-80 bind conflict *and* serve as the reload. Cost is ~30s downtime every
+60 days. Chosen over `--webroot` deliberately: webroot would need edits to
+`/etc/nginx/nginx.conf`, and the port-80 block is an unconditional 301 to HTTPS,
+so an `^~ /.well-known/acme-challenge/` block would have to be inserted *above*
+the redirect — more risk against a config that must not clobber the certbot SSL
+setup.
+
+**Verified 2026-08-08:** new cert `Aug 8 09:38:34` → `Nov 6 09:38:33 2026`; SAN
+covers both `isa820.com` and `www.isa820.com`; nginx confirmed *serving* the new
+cert via `openssl s_client`; `/` 200, `/read/Genesis/1` 200, `/library` 200,
+`www` 301, `/admin` 307 (gated); container healthy.
+
+**Gotchas for next time:**
+- `certbot renew --non-interactive` sleeps a random 0–8 min before acting
+  ("Non-interactive renewal: random delay of 318s"). It is not hung. Add
+  `--no-random-sleep-on-renew` when renewing by hand during an outage.
+- Check expiry with
+  `openssl x509 -noout -dates -in /etc/letsencrypt/live/isa820.com/fullchain.pem`
+- Confirm what nginx is *actually serving* (not just what's on disk) with
+  `echo | openssl s_client -connect 127.0.0.1:443 -servername isa820.com`
+- **Nothing here alerts.** Renewal is now correct, but still silent if it breaks
+  again. An expiry check that actually notifies is unfinished work.
 
 ---
 
